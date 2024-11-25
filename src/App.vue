@@ -10,7 +10,7 @@ import Hello from "./Hello";
 import Hi from "./Hi.vue";
 import { ref } from "vue";
 let hi = ref("");
-let HiHi = () => (<h1><Hello></Hello></h1>)
+let HiHi = () => <h1><Hello /></h1>
 
 </script>
 

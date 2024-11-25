@@ -11,6 +11,7 @@
     "importHelpers": true,
     "isolatedModules": true,
     "jsx":"preserve",
+    "jsxImportSource":"vue",
     "lib": [
       "DOM",
       "ES5",
