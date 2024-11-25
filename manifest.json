@@ -1,10 +1,9 @@
 {
-	"id": "obsidian-publishing-tools",
-	"name": "Publishing Tools",
-	"version": "0.0.1",
-	"minAppVersion": "0.12.0",
-	"description": "for test",
-	"author": "yuzai",
-	"authorUrl": "https://github.com/yuzai-code/",
-	"isDesktopOnly": true
+	"id": "obsidian-vitepress-publisher",
+	"name": "VitePress Publisher",
+	"version": "1.0.0",
+	"minAppVersion": "0.15.0",
+	"description": "将 Obsidian 笔记发布到 VitePress 站点",
+	"author": "Your Name",
+	"isDesktopOnly": false
 }
