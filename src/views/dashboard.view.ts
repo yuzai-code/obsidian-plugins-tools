@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf } from 'obsidian';
+import { ItemView, WorkspaceLeaf, Events } from 'obsidian';
 import { PublishHistoryService } from '../services/publish-history.service';
 import { PublishRecord } from '../models/publish-record.interface';
 
@@ -12,6 +12,8 @@ export class DashboardView extends ItemView {
         this.historyService = historyService;
     }
 
+    onRepublish: (filePath: string) => void = () => {};
+
     getViewType(): string {
         return DASHBOARD_VIEW_TYPE;
     }
@@ -21,6 +23,115 @@ export class DashboardView extends ItemView {
     }
 
     async onOpen() {
+        // 添加样式
+        this.containerEl.createEl('style', {
+            text: `
+                .dashboard-header {
+                    padding: 16px 20px;
+                    border-bottom: 1px solid var(--background-modifier-border);
+                    margin-bottom: 16px;
+                }
+                .dashboard-header h2 {
+                    margin: 0;
+                    font-size: 1.5em;
+                    color: var(--text-normal);
+                }
+                .notes-list {
+                    padding: 0 16px;
+                }
+                .empty-state {
+                    text-align: center;
+                    padding: 40px 20px;
+                    color: var(--text-muted);
+                    font-size: 1.1em;
+                }
+                .note-item {
+                    margin-bottom: 16px;
+                    border: 1px solid var(--background-modifier-border);
+                    border-radius: 8px;
+                    overflow: hidden;
+                }
+                .note-title-bar {
+                    display: flex;
+                    align-items: center;
+                    padding: 12px 16px;
+                    background: var(--background-secondary);
+                    cursor: pointer;
+                    user-select: none;
+                }
+                .note-title-bar:hover {
+                    background: var(--background-modifier-hover);
+                }
+                .toggle-icon {
+                    margin-right: 8px;
+                    color: var(--text-muted);
+                    font-size: 0.8em;
+                    width: 16px;
+                    text-align: center;
+                }
+                .note-title {
+                    flex: 1;
+                    font-weight: 500;
+                    color: var(--text-normal);
+                }
+                .action-button {
+                    padding: 4px 12px;
+                    border-radius: 4px;
+                    font-size: 0.9em;
+                    background: var(--interactive-accent);
+                    color: var(--text-on-accent);
+                    border: none;
+                    cursor: pointer;
+                    transition: background-color 0.2s ease;
+                }
+                .action-button:hover {
+                    background: var(--interactive-accent-hover);
+                }
+                .note-details {
+                    padding: 16px;
+                    background: var(--background-primary);
+                    border-top: 1px solid var(--background-modifier-border);
+                }
+                .note-details.hidden {
+                    display: none;
+                }
+                .detail-item {
+                    margin-bottom: 12px;
+                    color: var(--text-muted);
+                    font-size: 0.9em;
+                }
+                .platforms-list {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                }
+                .platform-info {
+                    padding: 12px;
+                    background: var(--background-secondary);
+                    border-radius: 6px;
+                }
+                .platform-name {
+                    font-weight: 600;
+                    margin-bottom: 8px;
+                    color: var(--text-normal);
+                }
+                .platform-name.github {
+                    color: #2da44e;
+                }
+                .platform-name.gitlab {
+                    color: #fc6d26;
+                }
+                .publish-time, .remote-path {
+                    font-size: 0.9em;
+                    color: var(--text-muted);
+                    margin-top: 4px;
+                }
+                .remote-path {
+                    word-break: break-all;
+                }
+            `
+        });
+
         await this.refresh();
     }
 
@@ -142,6 +253,13 @@ export class DashboardView extends ItemView {
                     detailsPanel.addClass('hidden');
                     toggleIcon.setText('▶');
                 }
+            });
+
+            // 添加重新发布按钮点击事件
+            republishButton.addEventListener('click', async (e: MouseEvent) => {
+                e.stopPropagation();
+                // 使用事件处理器而不是 trigger
+                this.onRepublish(filePath);
             });
         }
     }

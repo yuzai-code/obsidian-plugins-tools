@@ -58,7 +58,13 @@ export default class ObsidianPublisher extends Plugin {
 
 		this.registerView(
 			DASHBOARD_VIEW_TYPE,
-			(leaf) => (this.dashboardView = new DashboardView(leaf, this.publishHistory))
+			(leaf) => {
+				this.dashboardView = new DashboardView(leaf, this.publishHistory);
+				this.dashboardView.onRepublish = (filePath: string) => {
+					// 处理重新发布逻辑
+				};
+				return this.dashboardView;
+			}
 		);
 
 		this.addCommand({
