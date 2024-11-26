@@ -70,4 +70,29 @@ export class GitHubService {
             .filter((item: any) => item.type === 'dir')
             .map((item: any) => item.path.replace(`${basePath}/`, ''));
     }
+
+    async validateConfig(): Promise<{ success: boolean; message: string }> {
+        try {
+            const apiUrl = `https://api.github.com/repos/${this.config.username}/${this.config.repo}`;
+            const response = await fetch(apiUrl, { headers: this.getHeaders() });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                return {
+                    success: false,
+                    message: `配置验证失败: ${errorData.message || response.statusText}`
+                };
+            }
+
+            return {
+                success: true,
+                message: '配置验证成功！'
+            };
+        } catch (error) {
+            return {
+                success: false,
+                message: `配置验证出错: ${error.message}`
+            };
+        }
+    }
 } 

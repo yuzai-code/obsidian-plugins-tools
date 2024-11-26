@@ -157,4 +157,29 @@ export class GitLabService {
             throw new Error(`GitLab 创建分支失败: ${errorData.message || response.statusText}`);
         }
     }
+
+    async validateConfig(): Promise<{ success: boolean; message: string }> {
+        try {
+            const apiUrl = `${this.config.url}/api/v4/projects/${this.config.projectId}`;
+            const response = await fetch(apiUrl, { headers: this.getHeaders() });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                return {
+                    success: false,
+                    message: `配置验证失败: ${errorData.message || response.statusText}`
+                };
+            }
+
+            return {
+                success: true,
+                message: '配置验证成功！'
+            };
+        } catch (error) {
+            return {
+                success: false,
+                message: `配置验证出错: ${error.message}`
+            };
+        }
+    }
 } 

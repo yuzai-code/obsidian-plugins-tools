@@ -1,6 +1,8 @@
-import { App, PluginSettingTab, Setting, TextComponent, setIcon } from 'obsidian';
+import { App, PluginSettingTab, Setting, TextComponent, setIcon, Notice, ButtonComponent } from 'obsidian';
 import { PluginSettings } from './settings.interface';
 import ObsidianVitePressPlugin from '../main';
+import { GitHubService } from '../services/github.service';
+import { GitLabService } from '../services/gitlab.service';
 
 export class SettingsTab extends PluginSettingTab {
     private plugin: ObsidianVitePressPlugin;
@@ -10,6 +12,42 @@ export class SettingsTab extends PluginSettingTab {
         super(app, plugin);
         this.plugin = plugin;
         this.settings = plugin.settings;
+    }
+
+    private async validateGitHubConfig() {
+        const { githubToken, githubUsername, githubRepo, githubBranch } = this.settings;
+        if (!githubToken || !githubUsername || !githubRepo) {
+            new Notice('请先填写完整的 GitHub 配置信息');
+            return;
+        }
+
+        const githubService = new GitHubService({
+            token: githubToken,
+            username: githubUsername,
+            repo: githubRepo,
+            branch: githubBranch
+        });
+
+        const result = await githubService.validateConfig();
+        new Notice(result.message);
+    }
+
+    private async validateGitLabConfig() {
+        const { gitlabToken, gitlabUsername, gitlabRepo } = this.settings;
+        if (!gitlabToken || !gitlabUsername || !gitlabRepo) {
+            new Notice('请先填写完整的 GitLab 配置信息');
+            return;
+        }
+
+        const gitlabService = new GitLabService({
+            token: gitlabToken,
+            url: 'https://gitlab.com', // 这里可能需要从设置中获取
+            projectId: `${gitlabUsername}/${gitlabRepo}`,
+            branch: this.settings.gitlabBranch
+        });
+
+        const result = await gitlabService.validateConfig();
+        new Notice(result.message);
     }
 
     display(): void {
@@ -147,6 +185,17 @@ export class SettingsTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 }));
 
+        // 添加 GitHub 验证按钮
+        new Setting(containerEl)
+            .setName('验证 GitHub 配置')
+            .setDesc('测试 GitHub 配置是否正确')
+            .addButton((button: ButtonComponent) => {
+                button
+                    .setButtonText('验证配置')
+                    .onClick(() => this.validateGitHubConfig());
+                return button;
+            });
+
         // GitLab 设置区域
         containerEl.createEl('h2', { text: 'GitLab 设置' });
 
@@ -240,5 +289,16 @@ export class SettingsTab extends PluginSettingTab {
                     this.settings.gitlabPath = value;
                     await this.plugin.saveSettings();
                 }));
+
+        // 添加 GitLab 验证按钮
+        new Setting(containerEl)
+            .setName('验证 GitLab 配置')
+            .setDesc('测试 GitLab 配置是否正确')
+            .addButton((button: ButtonComponent) => {
+                button
+                    .setButtonText('验证配置')
+                    .onClick(() => this.validateGitLabConfig());
+                return button;
+            });
     }
 } 
