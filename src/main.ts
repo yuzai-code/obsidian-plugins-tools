@@ -3,6 +3,9 @@ import { PublisherSettingTab } from './settings/settings-tab';
 import { PluginSettings } from './settings/settings.interface';
 import { VitePressPublisher } from './publishers/vitepress-publisher';
 
+/**
+ * 插件默认设置
+ */
 const DEFAULT_SETTINGS: PluginSettings = {
 	vitepress: {
 		enabled: false,
@@ -11,10 +14,19 @@ const DEFAULT_SETTINGS: PluginSettings = {
 	}
 };
 
+/**
+ * Obsidian 发布插件主类
+ * @extends Plugin
+ */
 export default class ObsidianPublisher extends Plugin {
+	/** 插件设置 */
 	settings: PluginSettings;
+	/** 发布器集合 */
 	private publishers: Map<string, VitePressPublisher>;
 
+	/**
+	 * 插件加载时执行
+	 */
 	async onload() {
 		await this.loadSettings();
 		this.initializePublishers();
@@ -22,6 +34,10 @@ export default class ObsidianPublisher extends Plugin {
 		this.addSettingTab(new PublisherSettingTab(this.app, this));
 	}
 
+	/**
+	 * 初始化所有发布器
+	 * @private
+	 */
 	private initializePublishers() {
 		this.publishers = new Map();
 		
@@ -30,6 +46,10 @@ export default class ObsidianPublisher extends Plugin {
 		}
 	}
 
+	/**
+	 * 添加命令到命令面板
+	 * @private
+	 */
 	private addCommands() {
 		this.publishers.forEach((publisher, key) => {
 			this.addCommand({
@@ -40,15 +60,26 @@ export default class ObsidianPublisher extends Plugin {
 		});
 	}
 
+	/**
+	 * 加载插件设置
+	 */
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
 	}
 
+	/**
+	 * 保存插件设置
+	 */
 	async saveSettings() {
 		await this.saveData(this.settings);
 		this.initializePublishers();
 	}
 
+	/**
+	 * 发布内容到指定平台
+	 * @private
+	 * @param {string} platform - 目标平台标识
+	 */
 	private async publishTo(platform: string) {
 		const publisher = this.publishers.get(platform);
 		if (!publisher) {
