@@ -2,6 +2,7 @@ import { BasePublisher } from './base-publisher';
 import { PluginSettings } from '../settings/settings.interface';
 import { GitHubService } from '../services/github.service';
 import { GitLabService } from '../services/gitlab.service';
+import ObsidianPublisher from '../main';
 
 /**
  * VitePress 发布器实现类
@@ -12,12 +13,14 @@ export class VitePressPublisher extends BasePublisher {
     private settings: PluginSettings;
     private githubService: GitHubService;
     private gitlabService: GitLabService;
+    private plugin: ObsidianPublisher;
 
-    constructor(settings: PluginSettings) {
+    constructor(plugin: ObsidianPublisher, settings: PluginSettings) {
         super({
             outputPath: settings.vitepressPath,
             siteName: settings.platform === 'github' ? settings.githubRepo : settings.gitlabProjectId
         });
+        this.plugin = plugin;
         this.settings = settings;
         
         // 初始化 GitHub 服务
@@ -77,6 +80,17 @@ export class VitePressPublisher extends BasePublisher {
     }
 
     /**
+     * 记录发布状态
+     */
+    private async recordPublishStatus(filePath: string, remotePath: string, success: boolean) {
+        await this.plugin.recordPublish(
+            filePath,
+            remotePath,
+            this.settings.platform
+        );
+    }
+
+    /**
      * 执行发布操作
      * @param content 要发布的内容
      * @param filePath 文件路径
@@ -122,7 +136,13 @@ export class VitePressPublisher extends BasePublisher {
             } else {
                 throw new Error('未配置有效的发布平台');
             }
+
+            // 记录发布成功
+            await this.recordPublishStatus(filePath, fullPath, true);
+            
         } catch (error) {
+            // 记录发布失败
+            await this.recordPublishStatus(filePath, '', false);
             console.error('发布到 VitePress 失败:', error);
             throw new Error(`发布失败: ${error instanceof Error ? error.message : '未知错误'}`);
         }

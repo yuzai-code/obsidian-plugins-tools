@@ -66,3 +66,102 @@ h2[data-v-f8994186] {
 .token-visibility-toggle:hover {
   background-color: var(--background-modifier-hover);
 }
+
+/* 笔记列表样式 */
+.notes-list {
+    padding: 16px;
+}
+
+.note-item {
+    margin-bottom: 8px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    background: var(--background-secondary);
+}
+
+.note-title-bar {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.toggle-icon {
+    margin-right: 8px;
+    font-size: 0.8em;
+    color: var(--text-muted);
+    width: 16px;
+    text-align: center;
+}
+
+.note-title {
+    flex: 1;
+    font-weight: 500;
+}
+
+.action-button.publish {
+    padding: 4px 12px;
+    border-radius: 4px;
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border: none;
+    cursor: pointer;
+}
+
+.action-button.publish:hover {
+    background: var(--interactive-accent-hover);
+}
+
+.note-details {
+    padding: 12px;
+    border-top: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+}
+
+.note-details.hidden {
+    display: none;
+}
+
+.detail-item {
+    margin-bottom: 8px;
+    color: var(--text-muted);
+    font-size: 0.9em;
+}
+
+.platforms-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.platform-info {
+    padding: 8px;
+    border-radius: 4px;
+    background: var(--background-secondary);
+}
+
+.platform-name {
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.platform-name.github {
+    color: #24292e;
+}
+
+.platform-name.gitlab {
+    color: #fc6d26;
+}
+
+.publish-time, .remote-path {
+    font-size: 0.9em;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 32px;
+    color: var(--text-muted);
+}

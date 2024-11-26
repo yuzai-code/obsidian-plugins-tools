@@ -2,6 +2,8 @@ import { Plugin, Notice, Menu, TFile } from 'obsidian';
 import { SettingsTab } from './settings/settings-tab';
 import { PluginSettings } from './settings/settings.interface';
 import { VitePressPublisher } from './publishers/vitepress-publisher';
+import { PublishHistoryService } from './services/publish-history.service';
+import { DashboardView, DASHBOARD_VIEW_TYPE } from './views/dashboard.view';
 
 /**
  * 插件默认设置
@@ -38,6 +40,8 @@ export default class ObsidianPublisher extends Plugin {
 	settings: PluginSettings;
 	/** 发布器集合 */
 	private publishers: Map<string, VitePressPublisher>;
+	private publishHistory: PublishHistoryService;
+	private dashboardView: DashboardView;
 
 	/**
 	 * 插件加载时执行
@@ -48,6 +52,22 @@ export default class ObsidianPublisher extends Plugin {
 		this.addCommands();
 		this.addSettingTab(new SettingsTab(this.app, this));
 		this.initializeRibbonIcon();
+
+		this.publishHistory = new PublishHistoryService(this);
+		await this.publishHistory.load();
+
+		this.registerView(
+			DASHBOARD_VIEW_TYPE,
+			(leaf) => (this.dashboardView = new DashboardView(leaf, this.publishHistory))
+		);
+
+		this.addCommand({
+			id: 'open-publish-dashboard',
+			name: '打开发布仪表盘',
+			callback: () => this.openDashboard()
+		});
+
+		this.addRibbonIcon('gauge', '发布仪表盘', () => this.openDashboard());
 
 		// 添加一键发布命令
 		this.addCommand({
@@ -83,7 +103,7 @@ export default class ObsidianPublisher extends Plugin {
 		this.publishers = new Map();
 		
 		if (this.settings.vitepress.enabled) {
-			this.publishers.set('vitepress', new VitePressPublisher(this.settings));
+			this.publishers.set('vitepress', new VitePressPublisher(this, this.settings));
 		}
 	}
 
@@ -280,6 +300,32 @@ export default class ObsidianPublisher extends Plugin {
 			new Notice('发布成功！');
 		} catch (error) {
 			new Notice(`发布失败：${error instanceof Error ? error.message : '未知错误'}`);
+		}
+	}
+
+	async openDashboard() {
+		const { workspace } = this.app;
+		
+		let leaf = workspace.getLeavesOfType(DASHBOARD_VIEW_TYPE)[0];
+		if (!leaf) {
+			leaf = workspace.getRightLeaf(false);
+			await leaf.setViewState({ type: DASHBOARD_VIEW_TYPE });
+		}
+		
+		workspace.revealLeaf(leaf);
+	}
+
+	public async recordPublish(filePath: string, remotePath: string, platform: 'github' | 'gitlab') {
+		this.publishHistory.addRecord({
+			filePath,
+			remotePath,
+			platform,
+			lastPublished: Date.now(),
+			status: 'success'
+		});
+		
+		if (this.dashboardView) {
+			this.dashboardView.refresh();
 		}
 	}
 }
