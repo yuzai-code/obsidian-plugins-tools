@@ -7,23 +7,26 @@ import { VitePressPublisher } from './publishers/vitepress-publisher';
  * 插件默认设置
  */
 const DEFAULT_SETTINGS: PluginSettings = {
+	githubToken: '',
+	githubUsername: '',
+	githubRepo: '',
+	githubBranch: 'main',
+	vitepressPath: 'docs',
 	vitepress: {
 		enabled: true,
 		addFrontmatter: true,
 		keepFileStructure: false,
 		defaultDirectory: ''
 	},
-	githubToken: '',
-	githubUsername: '',
-	githubRepo: '',
-	githubBranch: 'main',
-	vitepressPath: 'docs',
 	gitlabToken: '',
 	gitlabUsername: '',
 	gitlabRepo: '',
 	gitlabBranch: 'main',
 	gitlabPath: 'docs',
-	gitlabEnabled: false
+	gitlabEnabled: false,
+	platform: 'github',
+	gitlabUrl: '',
+	gitlabProjectId: ''
 };
 
 /**
@@ -148,44 +151,76 @@ export default class ObsidianPublisher extends Plugin {
 		this.addRibbonIcon('paper-plane', '发布笔记', (evt: MouseEvent) => {
 			const menu = new Menu();
 
-			// 一键发布选项
+			// 添加平台选择子菜单
 			menu.addItem((item) => {
 				item
-					.setTitle('一键发布')
-					.setIcon('rocket')
+					.setTitle('GitHub')
+					.setIcon('github')
 					.onClick(async () => {
-						const activeFile = this.app.workspace.getActiveFile();
-						if (!activeFile) {
-							new Notice('没有打开的文件');
-							return;
-						}
-
-						try {
-							const content = await this.app.vault.read(activeFile);
-							const publisher = this.publishers.get('vitepress');
-							if (!publisher) {
-								throw new Error('VitePress 发布器未启用');
-							}
-							await publisher.quickPublish(content, activeFile.path);
-							new Notice('发布成功！');
-						} catch (error) {
-							new Notice(`发布失败: ${error instanceof Error ? error.message : '未知错误'}`);
-						}
+						this.settings.platform = 'github';
+						await this.saveSettings();
+						this.showPublishMenu(evt);
 					});
 			});
 
-			// 选择目录发布选项
 			menu.addItem((item) => {
 				item
-					.setTitle('选择目录发布')
-					.setIcon('folder')
+					.setTitle('GitLab')
+					.setIcon('gitlab')
 					.onClick(async () => {
-						await this.publishWithDirectorySelection(evt);
+						this.settings.platform = 'gitlab';
+						await this.saveSettings();
+						this.showPublishMenu(evt);
 					});
 			});
 
 			menu.showAtMouseEvent(evt);
 		});
+	}
+
+	/**
+	 * 显示发布选项菜单
+	 */
+	private showPublishMenu(evt: MouseEvent) {
+		const menu = new Menu();
+
+		// 一键发布选项
+		menu.addItem((item) => {
+			item
+				.setTitle(`一键发布到 ${this.settings.platform === 'github' ? 'GitHub' : 'GitLab'}`)
+				.setIcon('rocket')
+				.onClick(async () => {
+					const activeFile = this.app.workspace.getActiveFile();
+					if (!activeFile) {
+						new Notice('没有打开的文件');
+						return;
+					}
+
+					try {
+						const content = await this.app.vault.read(activeFile);
+						const publisher = this.publishers.get('vitepress');
+						if (!publisher) {
+							throw new Error('VitePress 发布器未启用');
+						}
+						await publisher.quickPublish(content, activeFile.path);
+						new Notice(`成功发布到 ${this.settings.platform === 'github' ? 'GitHub' : 'GitLab'}！`);
+					} catch (error) {
+						new Notice(`发布失败: ${error instanceof Error ? error.message : '未知错误'}`);
+					}
+				});
+		});
+
+		// 选择目录发布选项
+		menu.addItem((item) => {
+			item
+				.setTitle(`选择目录发布到 ${this.settings.platform === 'github' ? 'GitHub' : 'GitLab'}`)
+				.setIcon('folder')
+				.onClick(async () => {
+					await this.publishWithDirectorySelection(evt);
+				});
+		});
+
+		menu.showAtMouseEvent(evt);
 	}
 
 	/**

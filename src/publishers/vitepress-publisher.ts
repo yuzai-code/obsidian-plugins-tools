@@ -1,6 +1,7 @@
 import { BasePublisher } from './base-publisher';
 import { PluginSettings } from '../settings/settings.interface';
 import { GitHubService } from '../services/github.service';
+import { GitLabService } from '../services/gitlab.service';
 
 /**
  * VitePress 发布器实现类
@@ -10,19 +11,34 @@ import { GitHubService } from '../services/github.service';
 export class VitePressPublisher extends BasePublisher {
     private settings: PluginSettings;
     private githubService: GitHubService;
+    private gitlabService: GitLabService;
 
     constructor(settings: PluginSettings) {
         super({
             outputPath: settings.vitepressPath,
-            siteName: settings.githubRepo
+            siteName: settings.platform === 'github' ? settings.githubRepo : settings.gitlabProjectId
         });
         this.settings = settings;
-        this.githubService = new GitHubService({
-            username: settings.githubUsername,
-            repo: settings.githubRepo,
-            token: settings.githubToken,
-            branch: settings.githubBranch
-        });
+        
+        // 初始化 GitHub 服务
+        if (settings.platform === 'github') {
+            this.githubService = new GitHubService({
+                username: settings.githubUsername,
+                repo: settings.githubRepo,
+                token: settings.githubToken,
+                branch: settings.githubBranch
+            });
+        }
+        
+        // 初始化 GitLab 服务
+        if (settings.platform === 'gitlab') {
+            this.gitlabService = new GitLabService({
+                url: settings.gitlabUrl,
+                projectId: settings.gitlabProjectId,
+                token: settings.gitlabToken,
+                branch: settings.gitlabBranch
+            });
+        }
     }
 
     /**
@@ -90,11 +106,22 @@ export class VitePressPublisher extends BasePublisher {
                 ? this.addVitepressFrontmatter(content)
                 : content;
 
-            await this.githubService.uploadFile(
-                fullPath,
-                processedContent,
-                `Update ${targetPath} via Obsidian Publisher`
-            );
+            // 根据平台选择使用不同的服务
+            if (this.settings.platform === 'github' && this.githubService) {
+                await this.githubService.uploadFile(
+                    fullPath,
+                    processedContent,
+                    `Update ${targetPath} via Obsidian Publisher`
+                );
+            } else if (this.settings.platform === 'gitlab' && this.gitlabService) {
+                await this.gitlabService.uploadFile(
+                    fullPath,
+                    processedContent,
+                    `Update ${targetPath} via Obsidian Publisher`
+                );
+            } else {
+                throw new Error('未配置有效的发布平台');
+            }
         } catch (error) {
             console.error('发布到 VitePress 失败:', error);
             throw new Error(`发布失败: ${error instanceof Error ? error.message : '未知错误'}`);
@@ -178,7 +205,12 @@ layout: doc
      */
     async getDirectories(): Promise<string[]> {
         try {
-            return await this.githubService.getDirectories(this.settings.vitepressPath);
+            if (this.settings.platform === 'github' && this.githubService) {
+                return await this.githubService.getDirectories(this.settings.vitepressPath);
+            } else if (this.settings.platform === 'gitlab' && this.gitlabService) {
+                return await this.gitlabService.getDirectories(this.settings.vitepressPath);
+            }
+            throw new Error('未配置有效的发布平台');
         } catch (error) {
             console.error('获取目录列表失败:', error);
             throw error;
