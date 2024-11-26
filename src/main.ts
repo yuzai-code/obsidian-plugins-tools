@@ -28,7 +28,8 @@ const DEFAULT_SETTINGS: PluginSettings = {
 	gitlabEnabled: false,
 	platform: 'github',
 	gitlabUrl: '',
-	gitlabProjectId: ''
+	gitlabProjectId: '',
+	githubEnabled: false
 };
 
 /**
@@ -128,6 +129,14 @@ export default class ObsidianPublisher extends Plugin {
 		this.publishers = new Map();
 		
 		if (this.settings.vitepress.enabled) {
+			if (this.settings.platform === 'github' && !this.settings.githubEnabled) {
+				new Notice('GitHub 发布功能未启用');
+				return;
+			}
+			if (this.settings.platform === 'gitlab' && !this.settings.gitlabEnabled) {
+				new Notice('GitLab 发布功能未启用');
+				return;
+			}
 			this.publishers.set('vitepress', new VitePressPublisher(this, this.settings));
 		}
 	}
@@ -228,6 +237,16 @@ export default class ObsidianPublisher extends Plugin {
 	 */
 	private showPublishMenu(evt: MouseEvent) {
 		const menu = new Menu();
+
+		// 检查当前平台是否启用
+		const isEnabled = this.settings.platform === 'github' 
+			? this.settings.githubEnabled 
+			: this.settings.gitlabEnabled;
+
+		if (!isEnabled) {
+			new Notice(`${this.settings.platform === 'github' ? 'GitHub' : 'GitLab'} 发布功能未启用`);
+			return;
+		}
 
 		// 一键发布选项
 		menu.addItem((item) => {

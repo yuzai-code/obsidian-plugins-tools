@@ -7,6 +7,7 @@ export interface PluginSettings {
     vitepress: VitePressSettings;
     
     // GitHub 相关设置
+    githubEnabled: boolean;
     githubToken: string;
     githubUsername: string;
     githubRepo: string;
@@ -34,6 +35,7 @@ export interface VitePressSettings {
 
 export const DEFAULT_SETTINGS: PluginSettings = {
     // GitHub 默认设置
+    githubEnabled: false,
     githubToken: '',
     githubUsername: '',
     githubRepo: '',

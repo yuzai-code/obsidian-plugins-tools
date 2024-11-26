@@ -165,12 +165,24 @@ export class SettingsTab extends PluginSettingTab {
             text: 'GitHub 设置'
         });
 
+        // GitHub 启用开关
+        new Setting(githubSection)
+            .setName('启用 GitHub')
+            .setDesc('是否启用 GitHub 发布功能')
+            .addToggle(toggle => toggle
+                .setValue(this.settings.githubEnabled)
+                .onChange(async (value) => {
+                    this.settings.githubEnabled = value;
+                    await this.plugin.saveSettings();
+                }));
+
         // GitHub 验证按钮
         new Setting(githubHeader)
             .addButton((button: ButtonComponent) => {
                 button
                     .setButtonText('验证配置')
                     .setCta()
+                    .setDisabled(!this.settings.githubEnabled)
                     .onClick(() => this.validateGitHubConfig());
                 return button;
             });
