@@ -39,3 +39,30 @@ h2[data-v-f8994186] {
   font-size: 0.9em;
   margin-top: 4px;
 }
+.token-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.token-input {
+  flex-grow: 1;
+  padding: 6px;
+  border-radius: 4px;
+  border: 1px solid var(--background-modifier-border);
+}
+.token-visibility-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-muted);
+  border-radius: 4px;
+  transition: background-color 0.15s ease;
+}
+.token-visibility-toggle:hover {
+  background-color: var(--background-modifier-hover);
+}

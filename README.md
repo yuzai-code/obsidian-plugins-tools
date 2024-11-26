@@ -1,75 +1,85 @@
 # Obsidian Publisher Plugin
 
-一个用于将 Obsidian 笔记发布到 VitePress 站点的插件。
+一个用于将 Obsidian 笔记发布到个人博客的插件。目前支持发布到 VitePress 站点。
 
 ## 功能特点
 
-- 支持一键发布笔记到 VitePress 文档站点
-- 通过 GitHub API 自动同步内容
-- 完整的配置验证功能
-- 支持自定义发布路径和分支
+- 支持发布到 VitePress 站点
+- 支持一键发布和选择目录发布
+- 支持保持原有文件目录结构
+- 支持自动添加 frontmatter
+- 支持设置默认发布目录
+- 支持 GitHub Token 安全输入
 
 ## 安装方法
 
-1. 在 Obsidian 中打开设置
-2. 进入第三方插件设置
-3. 关闭安全模式
-4. 点击"浏览"，搜索"Publisher"
-5. 安装插件
+1. 下载最新版本的插件
+2. 解压到 Obsidian 插件目录 `.obsidian/plugins/`
+3. 在 Obsidian 设置中启用插件
 
 ## 配置说明
 
 ### VitePress 设置
 
-- **启用 VitePress 发布**: 开启/关闭 VitePress 发布功能
-- **输出路径**: VitePress 文档目录的路径
-- **站点名称**: VitePress 站点的显示名称
+- **启用 VitePress 发布**：开启/关闭 VitePress 发布功能
+- **添加 Frontmatter**：自动为发布的文档添加 frontmatter（包含日期等信息）
+- **保持文件结构**：发布时保持 Obsidian 中的原有文件目录结构
+- **默认发布目录**：设置一键发布时的默认目标目录
 
 ### GitHub 设置
 
-- **GitHub 访问令牌**: 您的 GitHub Personal Access Token
-  - 需要具有仓库读写权限
-  - 可以在 GitHub Settings > Developer settings > Personal access tokens 中创建
-- **GitHub 用户名**: 您的 GitHub 用户名
-- **GitHub 仓库名**: 文档仓库的名称
-- **GitHub 分支**: 要推送的目标分支（默认为 main）
-- **VitePress 文档路径**: 文档在仓库中的路径（默认为 docs）
+- **GitHub Token**：用于访问 GitHub API 的个人访问令牌
+- **GitHub 用户名**：你的 GitHub 用户名
+- **GitHub 仓库**：VitePress 站点所在的仓库名
+- **GitHub 分支**：要发布到的分支名称（默认为 main）
+- **VitePress 路径**：VitePress 文档在仓库中的路径
 
 ## 使用方法
 
-1. 完成插件配置
-2. 使用验证按钮检查配置是否正确
-3. 打开要发布的笔记
-4. 使用命令面板（Ctrl/Cmd + P）
-5. 输入"发布到 VitePress"并执行
+### 一键发布
+
+1. 点击工具栏的发布图标（纸飞机）
+2. 选择"一键发布"选项
+3. 文档将被发布到默认目录（如果已设置）或根目录
+
+### 选择目录发布
+
+1. 点击工具栏的发布图标
+2. 选择"选择目录发布"选项
+3. 在弹出的目录列表中选择目标目录
+4. 文档将被发布到选定的目录
+
+### 命令面板
+
+也可以通过命令面板使用以下命令：
+- `一键发布到 VitePress`：快速发布当前文档
+- `发布到 VitePress`：常规发布当前文档
+
+## 目录结构说明
+
+当启用"保持文件结构"选项时：
+- 插件会保持 Obsidian 中的原有目录结构
+- 例如：如果文件在 Obsidian 中的路径是 `docs/frontend/vue.md`
+  - 不设置默认目录时：发布后的路径将是 `vitepressPath/docs/frontend/vue.md`
+  - 设置默认目录为 `posts` 时：发布后的路径将是 `vitepressPath/posts/docs/frontend/vue.md`
+
+当禁用"保持文件结构"选项时：
+- 插件只使用文件名
+- 例如：对于同一个文件 `docs/frontend/vue.md`
+  - 不设置默认目录时：发布后的路径将是 `vitepressPath/vue.md`
+  - 设置默认目录为 `posts` 时：发布后的路径将是 `vitepressPath/posts/vue.md`
 
 ## 注意事项
 
-- 确保 GitHub Token 具有足够的权限
-- 仓库需要已经初始化并包含指定的分支
-- VitePress 文档路径必须存在于仓库中
-- 建议在首次使用时进行配置验证
+1. 首次使用前需要配置 GitHub Token 和相关设置
+2. GitHub Token 需要有仓库的读写权限
+3. 建议在发布前检查文档格式是否符合 VitePress 要求
+4. 如果启用了"保持文件结构"，请注意目标路径的长度限制
 
-## 错误处理
+## 问题反馈
 
-常见错误及解决方案：
+如果遇到问题或有功能建议，欢迎在 GitHub Issues 中反馈。
 
-- **GitHub Token 无效**: 检查 Token 是否正确且未过期
-- **仓库不存在**: 确认仓库名称和访问权限
-- **分支不存在**: 验证分支名称是否正确
-- **路径不存在**: 确保 VitePress 文档路径在仓库中已创建
+## License
 
-## 开发计划
-
-- [ ] 支持更多文档站点平台
-- [ ] 添加文件变更预览
-- [ ] 支持批量发布
-- [ ] 添加发布历史记录
-
-## 贡献指南
-
-欢迎提交 Issue 和 Pull Request！
-
-## 许可证
-
-MIT License
+MIT

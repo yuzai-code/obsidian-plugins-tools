@@ -12,5 +12,6 @@
 		"githubRepo": "",
 		"githubBranch": "main",
 		"vitepressPath": "docs"
-	}
+	},
+	"styles": ["styles.css"]
 }
