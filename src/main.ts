@@ -17,7 +17,13 @@ const DEFAULT_SETTINGS: PluginSettings = {
 	githubUsername: '',
 	githubRepo: '',
 	githubBranch: 'main',
-	vitepressPath: 'docs'
+	vitepressPath: 'docs',
+	gitlabToken: '',
+	gitlabUsername: '',
+	gitlabRepo: '',
+	gitlabBranch: 'main',
+	gitlabPath: 'docs',
+	gitlabEnabled: false
 };
 
 /**

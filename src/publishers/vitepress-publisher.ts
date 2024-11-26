@@ -1,5 +1,6 @@
 import { BasePublisher } from './base-publisher';
 import { PluginSettings } from '../settings/settings.interface';
+import { GitHubService } from '../services/github.service';
 
 /**
  * VitePress 发布器实现类
@@ -8,6 +9,7 @@ import { PluginSettings } from '../settings/settings.interface';
  */
 export class VitePressPublisher extends BasePublisher {
     private settings: PluginSettings;
+    private githubService: GitHubService;
 
     constructor(settings: PluginSettings) {
         super({
@@ -15,6 +17,12 @@ export class VitePressPublisher extends BasePublisher {
             siteName: settings.githubRepo
         });
         this.settings = settings;
+        this.githubService = new GitHubService({
+            username: settings.githubUsername,
+            repo: settings.githubRepo,
+            token: settings.githubToken,
+            branch: settings.githubBranch
+        });
     }
 
     /**
@@ -82,43 +90,11 @@ export class VitePressPublisher extends BasePublisher {
                 ? this.addVitepressFrontmatter(content)
                 : content;
 
-            const apiUrl = `https://api.github.com/repos/${this.settings.githubUsername}/${this.settings.githubRepo}/contents/${fullPath}`;
-            
-            const headers = {
-                'Authorization': `token ${this.settings.githubToken}`,
-                'Accept': 'application/vnd.github.v3+json',
-                'Content-Type': 'application/json'
-            };
-
-            // 检查文件是否已存在
-            let sha: string | undefined;
-            try {
-                const checkResponse = await fetch(apiUrl, { headers });
-                if (checkResponse.ok) {
-                    const data = await checkResponse.json();
-                    sha = data.sha;
-                }
-            } catch (e) {
-                // 文件不存在，继续创建
-            }
-
-            const body = {
-                message: `Update ${targetPath} via Obsidian Publisher`,
-                content: Buffer.from(processedContent).toString('base64'),
-                branch: this.settings.githubBranch || 'main',
-                ...(sha ? { sha } : {})
-            };
-
-            const response = await fetch(apiUrl, {
-                method: 'PUT',
-                headers,
-                body: JSON.stringify(body)
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(`发布失败: ${errorData.message || response.statusText}`);
-            }
+            await this.githubService.uploadFile(
+                fullPath,
+                processedContent,
+                `Update ${targetPath} via Obsidian Publisher`
+            );
         } catch (error) {
             console.error('发布到 VitePress 失败:', error);
             throw new Error(`发布失败: ${error instanceof Error ? error.message : '未知错误'}`);
@@ -161,30 +137,11 @@ layout: doc
             // 在 VitePress 文档目录下创建目录
             const fullPath = `${this.settings.vitepressPath}/${formattedPath}/.gitkeep`;
             
-            const apiUrl = `https://api.github.com/repos/${this.settings.githubUsername}/${this.settings.githubRepo}/contents/${fullPath}`;
-            
-            const headers = {
-                'Authorization': `token ${this.settings.githubToken}`,
-                'Accept': 'application/vnd.github.v3+json',
-                'Content-Type': 'application/json'
-            };
-
-            const body = {
-                message: `Create directory ${formattedPath}`,
-                content: Buffer.from('').toString('base64'),
-                branch: this.settings.githubBranch || 'main'
-            };
-
-            const response = await fetch(apiUrl, {
-                method: 'PUT',
-                headers,
-                body: JSON.stringify(body)
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(`创建目录失败: ${errorData.message || response.statusText}`);
-            }
+            await this.githubService.uploadFile(
+                fullPath,
+                '',
+                `Create directory ${formattedPath}`
+            );
         } catch (error) {
             console.error('创建目录失败:', error);
             throw error;
@@ -221,22 +178,7 @@ layout: doc
      */
     async getDirectories(): Promise<string[]> {
         try {
-            const apiUrl = `https://api.github.com/repos/${this.settings.githubUsername}/${this.settings.githubRepo}/contents/${this.settings.vitepressPath}`;
-            
-            const headers = {
-                'Authorization': `token ${this.settings.githubToken}`,
-                'Accept': 'application/vnd.github.v3+json'
-            };
-
-            const response = await fetch(apiUrl, { headers });
-            if (!response.ok) {
-                throw new Error(`获取目录列表失败: ${response.statusText}`);
-            }
-
-            const contents = await response.json();
-            return contents
-                .filter((item: any) => item.type === 'dir')
-                .map((item: any) => item.path.replace(`${this.settings.vitepressPath}/`, ''));
+            return await this.githubService.getDirectories(this.settings.vitepressPath);
         } catch (error) {
             console.error('获取目录列表失败:', error);
             throw error;
