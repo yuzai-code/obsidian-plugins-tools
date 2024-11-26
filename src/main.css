@@ -1,4 +1,51 @@
-/* Do not modify this file*/
-/* Add custom styles in 'stalin.css' */
+/* 首先放置所有的 @import */
 @import "./stalin.css";
 @import "../main.css";
+
+/* 然后是其他 CSS 规则 */
+.publisher-settings h3 {
+    margin-top: 24px;
+    margin-bottom: 16px;
+    font-size: 1.2em;
+    font-weight: 600;
+}
+
+/* 设置项容器样式 */
+.publisher-setting-item {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+/* 设置项描述文本样式 */
+.publisher-setting-item-description {
+    color: var(--text-muted);
+    font-size: 0.9em;
+    margin-top: 4px;
+}
+
+/* 输入框样式 */
+.publisher-setting-item input[type="text"] {
+    width: 100%;
+    padding: 6px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+}
+
+/* 开关按钮样式 */
+.publisher-setting-item .toggle-switch {
+    margin-right: 8px;
+}
+
+/* 错误提示样式 */
+.publisher-error {
+    color: var(--text-error);
+    font-size: 0.9em;
+    margin-top: 4px;
+}
+
+/* 成功提示样式 */
+.publisher-success {
+    color: var(--text-success);
+    font-size: 0.9em;
+    margin-top: 4px;
+}

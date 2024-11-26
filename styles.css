@@ -5,3 +5,37 @@ h2[data-v-f8994186] {
 }
 
 /* src/main.css */
+.publisher-settings h3 {
+  margin-top: 24px;
+  margin-bottom: 16px;
+  font-size: 1.2em;
+  font-weight: 600;
+}
+.publisher-setting-item {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+.publisher-setting-item-description {
+  color: var(--text-muted);
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.publisher-setting-item input[type=text] {
+  width: 100%;
+  padding: 6px;
+  border-radius: 4px;
+  border: 1px solid var(--background-modifier-border);
+}
+.publisher-setting-item .toggle-switch {
+  margin-right: 8px;
+}
+.publisher-error {
+  color: var(--text-error);
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.publisher-success {
+  color: var(--text-success);
+  font-size: 0.9em;
+  margin-top: 4px;
+}

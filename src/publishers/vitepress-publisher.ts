@@ -1,6 +1,5 @@
 import { BasePublisher } from './base-publisher';
-import { promises as fs } from 'fs';
-import * as path from 'path';
+import { PluginSettings } from '../settings/settings.interface';
 
 /**
  * VitePress 发布器实现类
@@ -8,6 +7,16 @@ import * as path from 'path';
  * @extends BasePublisher
  */
 export class VitePressPublisher extends BasePublisher {
+    private settings: PluginSettings;
+
+    constructor(settings: PluginSettings) {
+        super({
+            outputPath: settings.vitepress.outputPath,
+            siteName: settings.vitepress.siteName
+        });
+        this.settings = settings;
+    }
+
     /**
      * 获取发布器名称
      * @returns {string} 发布器名称
@@ -26,69 +35,51 @@ export class VitePressPublisher extends BasePublisher {
 
     /**
      * 执行发布操作
-     * @param {string} content - 要发布的内容
-     * @param {string} filePath - 文件路径
-     * @returns {Promise<void>}
+     * @param content 要发布的内容
+     * @param filePath 文件路径
      */
     async publish(content: string, filePath: string): Promise<void> {
-        const processedContent = await this.processContent(content);
-        const outputPath = path.join(this.options.outputPath, filePath);
-        
-        // 确保输出目录存在
-        await fs.mkdir(path.dirname(outputPath), { recursive: true });
-        // 写入处理后的内容
-        await fs.writeFile(outputPath, processedContent, 'utf-8');
-    }
+        try {
+            const apiUrl = `https://api.github.com/repos/${this.settings.githubUsername}/${this.settings.githubRepo}/contents/${this.settings.vitepressPath}/${filePath}`;
+            
+            const headers = {
+                'Authorization': `token ${this.settings.githubToken}`,
+                'Accept': 'application/vnd.github.v3+json'
+            };
 
-    /**
-     * 处理内容，转换为 VitePress 兼容格式
-     * @private
-     * @param {string} content - 原始内容
-     * @returns {Promise<string>} 处理后的内容
-     */
-    private async processContent(content: string): Promise<string> {
-        const frontmatter = this.generateFrontmatter();
-        let processedContent = content;
-        processedContent = this.processInternalLinks(processedContent);
-        processedContent = this.processImages(processedContent);
-        
-        return `${frontmatter}\n${processedContent}`;
-    }
+            // 获取文件 SHA（如果存在）
+            let sha: string | undefined;
+            try {
+                const response = await fetch(apiUrl, { headers });
+                if (response.ok) {
+                    const data = await response.json();
+                    sha = data.sha;
+                }
+            } catch (e) {
+                // 文件不存在，继续创建
+            }
 
-    /**
-     * 生成 VitePress frontmatter
-     * @private
-     * @returns {string} frontmatter 内容
-     */
-    private generateFrontmatter(): string {
-        return `---
-layout: doc
-title: ${this.options.siteName}
----`;
-    }
+            // 准备请求体
+            const body = {
+                message: `Update ${filePath}`,
+                content: Buffer.from(content).toString('base64'),
+                branch: this.settings.githubBranch || 'main',
+                ...(sha ? { sha } : {})
+            };
 
-    /**
-     * 处理 Obsidian 内部链接
-     * @private
-     * @param {string} content - 包含内部链接的内容
-     * @returns {string} 处理后的内容
-     */
-    private processInternalLinks(content: string): string {
-        return content.replace(/\[\[(.*?)\]\]/g, (_, text) => {
-            const [link, alias] = text.split('|');
-            return `[${alias || link}](${link.replace(/ /g, '-')})`;
-        });
-    }
+            // 发送请求
+            const response = await fetch(apiUrl, {
+                method: 'PUT',
+                headers,
+                body: JSON.stringify(body)
+            });
 
-    /**
-     * 处理图片链接
-     * @private
-     * @param {string} content - 包含图片链接的内容
-     * @returns {string} 处理后的内容
-     */
-    private processImages(content: string): string {
-        return content.replace(/!\[\[(.*?)\]\]/g, (_, imagePath) => {
-            return `![](/assets/images/${imagePath})`;
-        });
+            if (!response.ok) {
+                throw new Error(`GitHub API 响应错误: ${response.statusText}`);
+            }
+        } catch (error) {
+            console.error('发布到 VitePress 失败:', error);
+            throw error;
+        }
     }
 } 

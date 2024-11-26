@@ -1,9 +1,16 @@
 {
-	"id": "obsidian-vitepress-publisher",
-	"name": "VitePress Publisher",
+	"id": "obsidian-publisher",
+	"name": "Publisher",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "将 Obsidian 笔记发布到 VitePress 站点",
-	"author": "Your Name",
-	"isDesktopOnly": false
+	"description": "将 Obsidian 笔记发布到个人博客",
+	"author": "Yuzai",
+	"isDesktopOnly": false,
+	"defaultSettings": {
+		"githubToken": "",
+		"githubUsername": "",
+		"githubRepo": "",
+		"githubBranch": "main",
+		"vitepressPath": "docs"
+	}
 }

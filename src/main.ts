@@ -11,7 +11,12 @@ const DEFAULT_SETTINGS: PluginSettings = {
 		enabled: false,
 		outputPath: '',
 		siteName: 'My VitePress Site'
-	}
+	},
+	githubToken: '',
+	githubUsername: '',
+	githubRepo: '',
+	githubBranch: 'main',
+	vitepressPath: 'docs'
 };
 
 /**
@@ -42,7 +47,7 @@ export default class ObsidianPublisher extends Plugin {
 		this.publishers = new Map();
 		
 		if (this.settings.vitepress.enabled) {
-			this.publishers.set('vitepress', new VitePressPublisher(this.settings.vitepress));
+			this.publishers.set('vitepress', new VitePressPublisher(this.settings));
 		}
 	}
 
