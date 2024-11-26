@@ -61,6 +61,8 @@ export default class ObsidianPublisher extends Plugin {
 			DASHBOARD_VIEW_TYPE,
 			(leaf) => {
 				this.dashboardView = new DashboardView(leaf, this.publishHistory, this.settings);
+				
+				// 发布/重新发布处理
 				this.dashboardView.onRepublish = async (filePath: string, platform?: string) => {
 					try {
 						const file = this.app.vault.getAbstractFileByPath(filePath);
@@ -92,6 +94,70 @@ export default class ObsidianPublisher extends Plugin {
 						new Notice(`发布失败: ${error instanceof Error ? error.message : '未知错误'}`);
 					}
 				};
+
+				// 从远程更新处理
+				this.dashboardView.onUpdateFromRemote = async (filePath: string, platform: string) => {
+					try {
+						const file = this.app.vault.getAbstractFileByPath(filePath);
+						if (!(file instanceof TFile)) {
+							new Notice('本地文件不存在');
+							return;
+						}
+
+						const publisher = this.publishers.get('vitepress');
+						if (!publisher) {
+							throw new Error('VitePress 发布器未启用');
+						}
+
+						// 临时切换平台
+						const originalPlatform = this.settings.platform;
+						this.settings.platform = platform as 'github' | 'gitlab';
+						
+						// 从远程获取内容
+						const content = await publisher.getRemoteContent(filePath);
+						
+						// 更新本地文件
+						await this.app.vault.modify(file, content);
+						
+						// 恢复原平台设置
+						this.settings.platform = originalPlatform;
+						
+						new Notice('从远程更新成功！');
+						this.dashboardView.refresh();
+					} catch (error) {
+						new Notice(`更新失败: ${error instanceof Error ? error.message : '未知错误'}`);
+					}
+				};
+
+				// 从远程删除处理
+				this.dashboardView.onDeleteFromRemote = async (filePath: string, platform: string) => {
+					try {
+						const publisher = this.publishers.get('vitepress');
+						if (!publisher) {
+							throw new Error('VitePress 发布器未启用');
+						}
+
+						// 临时切换平台
+						const originalPlatform = this.settings.platform;
+						this.settings.platform = platform as 'github' | 'gitlab';
+						
+						// 删除远程文件
+						await publisher.deleteRemote(filePath);
+						
+						// 恢复原平台设置
+						this.settings.platform = originalPlatform;
+						
+						// 更新发布历史
+						this.publishHistory.removeRecord(filePath);
+						await this.publishHistory.save();
+						
+						new Notice('从远程删除成功！');
+						this.dashboardView.refresh();
+					} catch (error) {
+						new Notice(`删除失败: ${error instanceof Error ? error.message : '未知错误'}`);
+					}
+				};
+
 				return this.dashboardView;
 			}
 		);

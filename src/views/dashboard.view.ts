@@ -2,6 +2,7 @@ import { ItemView, WorkspaceLeaf, TFile, Notice } from 'obsidian';
 import { PublishHistoryService } from '../services/publish-history.service';
 import { PublishRecord } from '../models/publish-record.interface';
 import { PluginSettings } from '../settings/settings.interface';
+import { setIcon } from "obsidian";
 
 export const DASHBOARD_VIEW_TYPE = 'publish-dashboard';
 
@@ -326,95 +327,176 @@ export class DashboardView extends ItemView {
             return;
         }
 
-        // 渲染每个笔记的发布状态
         for (const [filePath, noteRecords] of noteGroups) {
-            // 只显示至少有一个成功发布记录的笔记
             const hasSuccessRecord = noteRecords.some(r => r.status === 'success');
             if (!hasSuccessRecord) continue;
 
             const noteItem = notesList.createEl('div', { cls: 'note-item' });
             
-            // 创建笔记标题栏（始终显示）
             const titleBar = noteItem.createEl('div', { cls: 'note-title-bar' });
             
-            // 添加展开/折叠图标
             const toggleIcon = titleBar.createEl('span', { 
                 cls: 'toggle-icon',
                 text: '▶'
             });
             
-            // 显示文件名
             const fileName = filePath.split('/').pop() || '';
             titleBar.createEl('span', { 
                 cls: 'note-title',
                 text: fileName
             });
 
-            // 添加重新发布按钮
-            const republishButton = titleBar.createEl('button', {
-                cls: 'action-button publish',
-                text: '重新发布'
-            });
-
-            // 创建详细信息面板（默认隐藏）
             const detailsPanel = noteItem.createEl('div', { 
                 cls: 'note-details hidden'
             });
 
-            // 添加本地路径信息
             detailsPanel.createEl('div', { 
                 cls: 'detail-item local-path',
                 text: `本地路径: ${filePath}`
             });
 
-            // 添加平台发布信息
             const platformsList = detailsPanel.createEl('div', { cls: 'platforms-list' });
             
             // GitHub 发布信息
             const githubRecord = noteRecords.find(r => r.platform === 'github' && r.status === 'success');
             if (githubRecord) {
                 const githubInfo = platformsList.createEl('div', { cls: 'platform-info' });
-                githubInfo.createEl('div', { 
+                const githubHeader = githubInfo.createEl('div', { cls: 'platform-header' });
+                
+                githubHeader.createEl('div', { 
                     cls: 'platform-name github',
                     text: 'GitHub'
                 });
+
+                const githubActions = githubHeader.createEl('div', { cls: 'platform-actions' });
+                
+                // 更新按钮
+                const updateBtn = githubActions.createEl('button', {
+                    cls: 'action-button update',
+                    attr: {
+                        'aria-label': '从远程更新'
+                    }
+                });
+                setIcon(updateBtn, 'download');
+                
+                // 重新发布按钮
+                const republishBtn = githubActions.createEl('button', {
+                    cls: 'action-button republish',
+                    attr: {
+                        'aria-label': '重新发布'
+                    }
+                });
+                setIcon(republishBtn, 'upload');
+                
+                // 删除按钮
+                const deleteBtn = githubActions.createEl('button', {
+                    cls: 'action-button delete',
+                    attr: {
+                        'aria-label': '从远程删除'
+                    }
+                });
+                setIcon(deleteBtn, 'trash');
+
                 githubInfo.createEl('div', { 
                     cls: 'publish-time',
                     text: `发布时间: ${new Date(githubRecord.lastPublished).toLocaleString()}`
                 });
+                
                 if (githubRecord.remotePath) {
                     githubInfo.createEl('div', { 
                         cls: 'remote-path',
                         text: `远程路径: ${githubRecord.remotePath}`
                     });
                 }
+
+                // 添加按钮事件
+                updateBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    await this.onUpdateFromRemote(filePath, 'github');
+                });
+
+                republishBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    await this.onRepublish(filePath, 'github');
+                });
+
+                deleteBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    await this.onDeleteFromRemote(filePath, 'github');
+                });
             }
 
             // GitLab 发布信息
             const gitlabRecord = noteRecords.find(r => r.platform === 'gitlab' && r.status === 'success');
             if (gitlabRecord) {
                 const gitlabInfo = platformsList.createEl('div', { cls: 'platform-info' });
-                gitlabInfo.createEl('div', { 
+                const gitlabHeader = gitlabInfo.createEl('div', { cls: 'platform-header' });
+                
+                gitlabHeader.createEl('div', { 
                     cls: 'platform-name gitlab',
                     text: 'GitLab'
                 });
+
+                const gitlabActions = gitlabHeader.createEl('div', { cls: 'platform-actions' });
+                
+                // 更新按钮
+                const updateBtn = gitlabActions.createEl('button', {
+                    cls: 'action-button update',
+                    attr: {
+                        'aria-label': '从远程更新'
+                    }
+                });
+                setIcon(updateBtn, 'download');
+                
+                // 重新发布按钮
+                const republishBtn = gitlabActions.createEl('button', {
+                    cls: 'action-button republish',
+                    attr: {
+                        'aria-label': '重新发布'
+                    }
+                });
+                setIcon(republishBtn, 'upload');
+                
+                // 删除按钮
+                const deleteBtn = gitlabActions.createEl('button', {
+                    cls: 'action-button delete',
+                    attr: {
+                        'aria-label': '从远程删除'
+                    }
+                });
+                setIcon(deleteBtn, 'trash');
+
                 gitlabInfo.createEl('div', { 
                     cls: 'publish-time',
                     text: `发布时间: ${new Date(gitlabRecord.lastPublished).toLocaleString()}`
                 });
+                
                 if (gitlabRecord.remotePath) {
                     gitlabInfo.createEl('div', { 
                         cls: 'remote-path',
                         text: `远程路径: ${gitlabRecord.remotePath}`
                     });
                 }
+
+                // 添加按钮事件
+                updateBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    await this.onUpdateFromRemote(filePath, 'gitlab');
+                });
+
+                republishBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    await this.onRepublish(filePath, 'gitlab');
+                });
+
+                deleteBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    await this.onDeleteFromRemote(filePath, 'gitlab');
+                });
             }
 
-            // 添加点击事件处理展开/折叠
-            titleBar.addEventListener('click', (e) => {
-                // 如果点击的是重新发布按钮，不处理折叠
-                if (e.target === republishButton) return;
-                
+            // 添加展开/折叠事件
+            titleBar.addEventListener('click', () => {
                 const isHidden = detailsPanel.hasClass('hidden');
                 if (isHidden) {
                     detailsPanel.removeClass('hidden');
@@ -424,15 +506,14 @@ export class DashboardView extends ItemView {
                     toggleIcon.setText('▶');
                 }
             });
-
-            // 添加重新发布按钮点击事件
-            republishButton.addEventListener('click', async (e: MouseEvent) => {
-                e.stopPropagation();
-                // 使用事件处理器而不是 trigger
-                this.onRepublish(filePath);
-            });
         }
     }
+
+    // 从远程更新笔记
+    onUpdateFromRemote: (filePath: string, platform: string) => Promise<void> = async () => {};
+
+    // 从远程删除笔记
+    onDeleteFromRemote: (filePath: string, platform: string) => Promise<void> = async () => {};
 
     private async renderAllNotes(
         container: HTMLElement, 

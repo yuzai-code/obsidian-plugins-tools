@@ -115,7 +115,7 @@ export class VitePressPublisher extends BasePublisher {
             // 构建完整的目标路径
             const fullPath = `${this.settings.vitepressPath}/${targetPath}`;
 
-            // 根据设置决定是否添加 frontmatter
+            // ���据设置决定是否添加 frontmatter
             const processedContent = this.settings.vitepress.addFrontmatter 
                 ? this.addVitepressFrontmatter(content)
                 : content;
@@ -259,5 +259,48 @@ layout: doc
             console.error('一键发布失败:', error);
             throw new Error(`一键发布失败: ${error instanceof Error ? error.message : '未知错误'}`);
         }
+    }
+
+    /**
+     * 获取远程文件内容
+     */
+    async getRemoteContent(filePath: string): Promise<string> {
+        const service = this.getService();
+        const remotePath = this.getRemotePath(filePath);
+        return await service.getFileContent(remotePath);
+    }
+
+    /**
+     * 删除远程文件
+     */
+    async deleteRemote(filePath: string): Promise<void> {
+        const service = this.getService();
+        const remotePath = this.getRemotePath(filePath);
+        await service.deleteFile(remotePath, '从 Obsidian 删除文件');
+    }
+
+    private getService(): GitHubService | GitLabService {
+        if (this.settings.platform === 'github' && this.githubService) {
+            return this.githubService;
+        } else if (this.settings.platform === 'gitlab' && this.gitlabService) {
+            return this.gitlabService;
+        }
+        throw new Error('未配置有效的发布平台');
+    }
+
+    private getRemotePath(filePath: string): string {
+        // 获取 VitePress 基础路径
+        const basePath = this.settings.platform === 'github' 
+            ? this.settings.vitepressPath 
+            : this.settings.gitlabPath;
+
+        // 如果设置了保持文件结构
+        if (this.settings.vitepress.keepFileStructure) {
+            return `${basePath}/${filePath}`;
+        }
+
+        // 否则只使用文件名，放在基础路径下
+        const fileName = filePath.split('/').pop() || '';
+        return `${basePath}/${fileName}`;
     }
 } 

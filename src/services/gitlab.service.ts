@@ -7,6 +7,9 @@ interface GitLabConfig {
 
 export class GitLabService {
     private config: GitLabConfig;
+    private api: any; // 根据你使用的 GitLab API 客户端类型来定义具体类型
+    private projectId: string | number;
+    private branch: string;
 
     constructor(config: GitLabConfig) {
         this.config = {
@@ -93,45 +96,31 @@ export class GitLabService {
      * 获取文件内容
      */
     async getFileContent(path: string): Promise<string> {
-        const encodedPath = encodeURIComponent(path);
-        const apiUrl = `${this.config.url}/api/v4/projects/${this.config.projectId}/repository/files/${encodedPath}/raw`;
-        
-        const params = new URLSearchParams({
-            ref: this.config.branch
-        });
-
-        const response = await fetch(`${apiUrl}?${params}`, {
-            headers: this.getHeaders()
-        });
-
-        if (!response.ok) {
-            throw new Error(`获取文件内容失败: ${response.statusText}`);
+        try {
+            const response = await this.api.RepositoryFiles.show(
+                this.projectId,
+                path,
+                this.branch
+            );
+            return Buffer.from(response.content, 'base64').toString();
+        } catch (error) {
+            throw new Error(`获取文件内容失败: ${error instanceof Error ? error.message : '未知错误'}`);
         }
-
-        return await response.text();
     }
 
     /**
      * 删除文件
      */
     async deleteFile(path: string, message: string): Promise<void> {
-        const encodedPath = encodeURIComponent(path);
-        const apiUrl = `${this.config.url}/api/v4/projects/${this.config.projectId}/repository/files/${encodedPath}`;
-
-        const body = {
-            branch: this.config.branch,
-            commit_message: message
-        };
-
-        const response = await fetch(apiUrl, {
-            method: 'DELETE',
-            headers: this.getHeaders(),
-            body: JSON.stringify(body)
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`GitLab 删除文件失败: ${errorData.message || response.statusText}`);
+        try {
+            await this.api.RepositoryFiles.remove(
+                this.projectId,
+                path,
+                this.branch,
+                message
+            );
+        } catch (error) {
+            throw new Error(`删除文件失败: ${error instanceof Error ? error.message : '未知错误'}`);
         }
     }
 

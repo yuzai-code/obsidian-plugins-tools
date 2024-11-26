@@ -35,7 +35,7 @@ export class GitHubService {
                 sha = data.sha;
             }
         } catch (e) {
-            // 文件不存在，继续创建
+            // 文件不存在，续创建
         }
 
         const body = {
@@ -93,6 +93,70 @@ export class GitHubService {
                 success: false,
                 message: `配置验证出错: ${error.message}`
             };
+        }
+    }
+
+    /**
+     * 获取文件内容
+     */
+    async getFileContent(path: string): Promise<string> {
+        try {
+            const encodedPath = encodeURIComponent(path);
+            const apiUrl = `https://api.github.com/repos/${this.config.username}/${this.config.repo}/contents/${encodedPath}`;
+            const response = await fetch(apiUrl, {
+                headers: this.getHeaders(),
+                method: 'GET'
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`获取文件失败: ${errorData.message || response.statusText}`);
+            }
+
+            const data = await response.json();
+            return Buffer.from(data.content, 'base64').toString();
+        } catch (error) {
+            throw new Error(`获取文件内容失败: ${error instanceof Error ? error.message : '未知错误'}`);
+        }
+    }
+
+    /**
+     * 删除文件
+     */
+    async deleteFile(path: string, message: string): Promise<void> {
+        try {
+            // 首先获取文件的 SHA
+            const encodedPath = encodeURIComponent(path);
+            const apiUrl = `https://api.github.com/repos/${this.config.username}/${this.config.repo}/contents/${encodedPath}`;
+            const response = await fetch(apiUrl, {
+                headers: this.getHeaders(),
+                method: 'GET'
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`无法获取文件: ${errorData.message || response.statusText}`);
+            }
+
+            const data = await response.json();
+            const sha = data.sha;
+
+            const deleteResponse = await fetch(apiUrl, {
+                method: 'DELETE',
+                headers: this.getHeaders(),
+                body: JSON.stringify({
+                    message,
+                    sha,
+                    branch: this.config.branch
+                })
+            });
+
+            if (!deleteResponse.ok) {
+                const errorData = await deleteResponse.json();
+                throw new Error(`删除文件失败: ${errorData.message || deleteResponse.statusText}`);
+            }
+        } catch (error) {
+            throw new Error(`删除文件失败: ${error instanceof Error ? error.message : '未知错误'}`);
         }
     }
 } 
