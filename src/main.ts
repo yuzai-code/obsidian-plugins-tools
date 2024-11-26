@@ -60,8 +60,8 @@ export default class ObsidianPublisher extends Plugin {
 		this.registerView(
 			DASHBOARD_VIEW_TYPE,
 			(leaf) => {
-				this.dashboardView = new DashboardView(leaf, this.publishHistory);
-				this.dashboardView.onRepublish = async (filePath: string) => {
+				this.dashboardView = new DashboardView(leaf, this.publishHistory, this.settings);
+				this.dashboardView.onRepublish = async (filePath: string, platform?: string) => {
 					try {
 						const file = this.app.vault.getAbstractFileByPath(filePath);
 						if (!(file instanceof TFile)) {
@@ -75,12 +75,21 @@ export default class ObsidianPublisher extends Plugin {
 							throw new Error('VitePress 发布器未启用');
 						}
 
-						await publisher.publish(content, filePath);
-						new Notice('重新发布成功！');
+						// 如果指定了平台，则临时切换平台
+						if (platform) {
+							const originalPlatform = this.settings.platform;
+							this.settings.platform = platform as 'github' | 'gitlab';
+							await publisher.publish(content, filePath);
+							this.settings.platform = originalPlatform;
+						} else {
+							await publisher.publish(content, filePath);
+						}
+						
+						new Notice('发布成功！');
 						// 刷新仪表盘视图
 						this.dashboardView.refresh();
 					} catch (error) {
-						new Notice(`重新发布失败: ${error instanceof Error ? error.message : '未知错误'}`);
+						new Notice(`发布失败: ${error instanceof Error ? error.message : '未知错误'}`);
 					}
 				};
 				return this.dashboardView;

@@ -1,18 +1,27 @@
-import { ItemView, WorkspaceLeaf, Events } from 'obsidian';
+import { ItemView, WorkspaceLeaf, TFile, Notice } from 'obsidian';
 import { PublishHistoryService } from '../services/publish-history.service';
 import { PublishRecord } from '../models/publish-record.interface';
+import { PluginSettings } from '../settings/settings.interface';
 
 export const DASHBOARD_VIEW_TYPE = 'publish-dashboard';
 
 export class DashboardView extends ItemView {
     private historyService: PublishHistoryService;
+    private settings: PluginSettings;
+    private selectedNotes: Set<string> = new Set();
+    private currentTab: 'published' | 'all' = 'published';
 
-    constructor(leaf: WorkspaceLeaf, historyService: PublishHistoryService) {
+    constructor(
+        leaf: WorkspaceLeaf, 
+        historyService: PublishHistoryService,
+        settings: PluginSettings
+    ) {
         super(leaf);
         this.historyService = historyService;
+        this.settings = settings;
     }
 
-    onRepublish: (filePath: string) => void = () => {};
+    onRepublish: (filePath: string, platform?: string) => Promise<void> = async () => {};
 
     getViewType(): string {
         return DASHBOARD_VIEW_TYPE;
@@ -129,6 +138,80 @@ export class DashboardView extends ItemView {
                 .remote-path {
                     word-break: break-all;
                 }
+                .batch-publish-section {
+                    padding: 16px;
+                    margin-bottom: 16px;
+                    background: var(--background-secondary);
+                    border-radius: 8px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+                .batch-publish-button {
+                    background: var(--interactive-accent);
+                    color: var(--text-on-accent);
+                    padding: 8px 16px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    border: none;
+                }
+                .batch-publish-button:disabled {
+                    opacity: 0.5;
+                    cursor: not-allowed;
+                }
+                .note-checkbox {
+                    margin-right: 8px;
+                }
+                .platform-badge {
+                    display: inline-block;
+                    padding: 2px 8px;
+                    border-radius: 4px;
+                    margin-right: 8px;
+                    font-size: 0.8em;
+                }
+                .platform-badge.github {
+                    background: #2da44e33;
+                    color: #2da44e;
+                }
+                .platform-badge.gitlab {
+                    background: #fc6d2633;
+                    color: #fc6d26;
+                }
+                .section-title {
+                    font-size: 1.2em;
+                    font-weight: 600;
+                    margin: 24px 0 16px;
+                    padding: 0 16px;
+                }
+                .tab-group {
+                    display: flex;
+                    gap: 1px;
+                    padding: 8px 16px;
+                    background: var(--background-secondary);
+                    margin-bottom: 16px;
+                }
+                .tab-item {
+                    padding: 8px 16px;
+                    cursor: pointer;
+                    border-radius: 4px;
+                    color: var(--text-muted);
+                    user-select: none;
+                    flex: 1;
+                    text-align: center;
+                }
+                .tab-item:hover {
+                    background: var(--background-modifier-hover);
+                }
+                .tab-item.active {
+                    background: var(--interactive-accent);
+                    color: var(--text-on-accent);
+                }
+                .tab-content {
+                    display: none;
+                }
+                .tab-content.active {
+                    display: block;
+                }
             `
         });
 
@@ -136,17 +219,104 @@ export class DashboardView extends ItemView {
     }
 
     async refresh() {
-        const container = this.containerEl.children[1];
+        const container = this.containerEl.children[1] as HTMLElement;
         container.empty();
         
-        // 创建标题
-        const header = container.createEl('div', { cls: 'dashboard-header' });
-        header.createEl('h2', { text: '已发布笔记' });
-
-        // 创建笔记列表
-        const notesList = container.createEl('div', { cls: 'notes-list' });
+        // 创建标签切换组
+        const tabGroup = container.createEl('div', { cls: 'tab-group' });
         
-        // 获取所有记录并按文件路径分组
+        // 已发布笔记标签
+        const publishedTab = tabGroup.createEl('div', {
+            cls: `tab-item ${this.currentTab === 'published' ? 'active' : ''}`,
+            text: '已发布笔记'
+        });
+
+        // 所有笔记标签
+        const allTab = tabGroup.createEl('div', {
+            cls: `tab-item ${this.currentTab === 'all' ? 'active' : ''}`,
+            text: '所有笔记'
+        });
+
+        // 创建内容区域
+        const publishedContent = container.createEl('div', {
+            cls: `tab-content ${this.currentTab === 'published' ? 'active' : ''}`
+        });
+        const allContent = container.createEl('div', {
+            cls: `tab-content ${this.currentTab === 'all' ? 'active' : ''}`
+        });
+
+        // 渲染已发布笔记内容
+        if (this.currentTab === 'published') {
+            await this.renderPublishedNotes(publishedContent);
+        }
+
+        // 渲染所有笔记内容
+        if (this.currentTab === 'all') {
+            // 批量发布区域
+            const batchSection = allContent.createEl('div', { cls: 'batch-publish-section' });
+            const selectedCount = batchSection.createEl('span');
+            const updateSelectedCount = () => {
+                selectedCount.setText(`已选择 ${this.selectedNotes.size} 个笔记`);
+            };
+            updateSelectedCount();
+
+            const batchPublishBtn = batchSection.createEl('button', {
+                cls: 'batch-publish-button',
+                text: '批量发布'
+            });
+            batchPublishBtn.disabled = this.selectedNotes.size === 0;
+
+            await this.renderAllNotes(allContent, updateSelectedCount, batchPublishBtn);
+
+            // 批量发布按钮点击事件
+            batchPublishBtn.addEventListener('click', async () => {
+                if (this.selectedNotes.size === 0) return;
+
+                const enabledPlatforms: string[] = [];
+                if (this.settings.githubEnabled) enabledPlatforms.push('github');
+                if (this.settings.gitlabEnabled) enabledPlatforms.push('gitlab');
+
+                if (enabledPlatforms.length === 0) {
+                    new Notice('请先启用至少一个发布平台');
+                    return;
+                }
+
+                try {
+                    for (const filePath of this.selectedNotes) {
+                        const file = this.app.vault.getAbstractFileByPath(filePath);
+                        if (!(file instanceof TFile)) continue;
+
+                        for (const platform of enabledPlatforms) {
+                            await this.onRepublish(filePath, platform);
+                        }
+                    }
+                    new Notice('批量发布完成！');
+                    this.selectedNotes.clear();
+                    await this.refresh();
+                } catch (error) {
+                    new Notice(`批量发布失败: ${error instanceof Error ? error.message : '未知错误'}`);
+                }
+            });
+        }
+
+        // 添加标签切换事件
+        publishedTab.addEventListener('click', async () => {
+            if (this.currentTab !== 'published') {
+                this.currentTab = 'published';
+                await this.refresh();
+            }
+        });
+
+        allTab.addEventListener('click', async () => {
+            if (this.currentTab !== 'all') {
+                this.currentTab = 'all';
+                await this.refresh();
+            }
+        });
+    }
+
+    private async renderPublishedNotes(container: HTMLElement) {
+        const notesList = container.createEl('div', { cls: 'notes-list' });
         const records = this.historyService.getAllRecords();
         const noteGroups = this.groupRecordsByFilePath(records);
         
@@ -260,6 +430,100 @@ export class DashboardView extends ItemView {
                 e.stopPropagation();
                 // 使用事件处理器而不是 trigger
                 this.onRepublish(filePath);
+            });
+        }
+    }
+
+    private async renderAllNotes(
+        container: HTMLElement, 
+        updateSelectedCount: () => void,
+        batchPublishBtn: HTMLButtonElement
+    ) {
+        const notesList = container.createEl('div', { cls: 'notes-list' });
+        const files = this.app.vault.getMarkdownFiles();
+        
+        if (files.length === 0) {
+            const emptyState = notesList.createEl('div', { cls: 'empty-state' });
+            emptyState.createEl('div', { text: '暂无笔记' });
+            return;
+        }
+
+        for (const file of files) {
+            const noteItem = notesList.createEl('div', { cls: 'note-item' });
+            
+            // 创建笔记标题栏
+            const titleBar = noteItem.createEl('div', { cls: 'note-title-bar' });
+            
+            // 添加复选框
+            const checkbox = titleBar.createEl('input', {
+                type: 'checkbox',
+                cls: 'note-checkbox'
+            });
+            checkbox.checked = this.selectedNotes.has(file.path);
+            
+            // 添加展开/折叠图标
+            const toggleIcon = titleBar.createEl('span', { 
+                cls: 'toggle-icon',
+                text: '▶'
+            });
+            
+            // 显示文件名
+            titleBar.createEl('span', { 
+                cls: 'note-title',
+                text: file.name
+            });
+
+            // 创建详细信息面板
+            const detailsPanel = noteItem.createEl('div', { 
+                cls: 'note-details hidden'
+            });
+
+            // 添加本地路径信息
+            detailsPanel.createEl('div', { 
+                cls: 'detail-item local-path',
+                text: `本地路径: ${file.path}`
+            });
+
+            // 添加可用平台信息
+            const platformsList = detailsPanel.createEl('div', { cls: 'platforms-list' });
+            
+            if (this.settings.githubEnabled) {
+                const githubBadge = platformsList.createEl('span', {
+                    cls: 'platform-badge github',
+                    text: 'GitHub'
+                });
+            }
+            
+            if (this.settings.gitlabEnabled) {
+                const gitlabBadge = platformsList.createEl('span', {
+                    cls: 'platform-badge gitlab',
+                    text: 'GitLab'
+                });
+            }
+
+            // 复选框事件
+            checkbox.addEventListener('change', () => {
+                if (checkbox.checked) {
+                    this.selectedNotes.add(file.path);
+                } else {
+                    this.selectedNotes.delete(file.path);
+                }
+                updateSelectedCount();
+                batchPublishBtn.disabled = this.selectedNotes.size === 0;
+            });
+
+            // 标题栏点击事件（展开/折叠）
+            titleBar.addEventListener('click', (e) => {
+                if (e.target === checkbox) return;
+                
+                const isHidden = detailsPanel.hasClass('hidden');
+                if (isHidden) {
+                    detailsPanel.removeClass('hidden');
+                    toggleIcon.setText('▼');
+                } else {
+                    detailsPanel.addClass('hidden');
+                    toggleIcon.setText('▶');
+                }
             });
         }
     }
