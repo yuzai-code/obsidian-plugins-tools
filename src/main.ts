@@ -60,8 +60,27 @@ export default class ObsidianPublisher extends Plugin {
 			DASHBOARD_VIEW_TYPE,
 			(leaf) => {
 				this.dashboardView = new DashboardView(leaf, this.publishHistory);
-				this.dashboardView.onRepublish = (filePath: string) => {
-					// 处理重新发布逻辑
+				this.dashboardView.onRepublish = async (filePath: string) => {
+					try {
+						const file = this.app.vault.getAbstractFileByPath(filePath);
+						if (!(file instanceof TFile)) {
+							new Notice('文件不存在或不可访问');
+							return;
+						}
+
+						const content = await this.app.vault.read(file);
+						const publisher = this.publishers.get('vitepress');
+						if (!publisher) {
+							throw new Error('VitePress 发布器未启用');
+						}
+
+						await publisher.publish(content, filePath);
+						new Notice('重新发布成功！');
+						// 刷新仪表盘视图
+						this.dashboardView.refresh();
+					} catch (error) {
+						new Notice(`重新发布失败: ${error instanceof Error ? error.message : '未知错误'}`);
+					}
 				};
 				return this.dashboardView;
 			}
