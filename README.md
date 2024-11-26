@@ -1,5 +1,7 @@
 # Obsidian Publisher Plugin
 
+[English](README_EN.md) | 简体中文
+
 一个用于将 Obsidian 笔记发布到个人博客的插件。目前支持发布到 VitePress 站点。
 
 ## 功能特点
@@ -52,18 +54,21 @@
 ### 命令面板
 
 也可以通过命令面板使用以下命令：
+
 - `一键发布到 VitePress`：快速发布当前文档
 - `发布到 VitePress`：常规发布当前文档
 
 ## 目录结构说明
 
 当启用"保持文件结构"选项时：
+
 - 插件会保持 Obsidian 中的原有目录结构
 - 例如：如果文件在 Obsidian 中的路径是 `docs/frontend/vue.md`
   - 不设置默认目录时：发布后的路径将是 `vitepressPath/docs/frontend/vue.md`
   - 设置默认目录为 `posts` 时：发布后的路径将是 `vitepressPath/posts/docs/frontend/vue.md`
 
 当禁用"保持文件结构"选项时：
+
 - 插件只使用文件名
 - 例如：对于同一个文件 `docs/frontend/vue.md`
   - 不设置默认目录时：发布后的路径将是 `vitepressPath/vue.md`
