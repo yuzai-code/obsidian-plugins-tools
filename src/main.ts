@@ -116,7 +116,7 @@ export default class ObsidianPublisher extends Plugin {
 						// 从远程获取内容
 						const content = await publisher.getRemoteContent(filePath);
 						
-						// 更新本地文件
+						// 更新���地文件
 						await this.app.vault.modify(file, content);
 						
 						// 恢复原平台设置
@@ -148,7 +148,7 @@ export default class ObsidianPublisher extends Plugin {
 						this.settings.platform = originalPlatform;
 						
 						// 更新发布历史
-						this.publishHistory.removeRecord(filePath);
+						this.publishHistory.removeRecord(filePath, platform);
 						await this.publishHistory.save();
 						
 						new Notice('从远程删除成功！');
@@ -434,13 +434,13 @@ export default class ObsidianPublisher extends Plugin {
 		workspace.revealLeaf(leaf);
 	}
 
-	public async recordPublish(filePath: string, remotePath: string, platform: 'github' | 'gitlab') {
+	public async recordPublish(filePath: string, remotePath: string, platform: 'github' | 'gitlab', status: 'success' | 'failed' = 'success') {
 		this.publishHistory.addRecord({
 			filePath,
 			remotePath,
 			platform,
 			lastPublished: Date.now(),
-			status: 'success'
+			status
 		});
 		
 		if (this.dashboardView) {

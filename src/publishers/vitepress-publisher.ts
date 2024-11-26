@@ -86,7 +86,8 @@ export class VitePressPublisher extends BasePublisher {
         await this.plugin.recordPublish(
             filePath,
             remotePath,
-            this.settings.platform
+            this.settings.platform,
+            success ? 'success' : 'failed'
         );
     }
 
@@ -115,7 +116,7 @@ export class VitePressPublisher extends BasePublisher {
             // 构建完整的目标路径
             const fullPath = `${this.settings.vitepressPath}/${targetPath}`;
 
-            // ���据设置决定是否添加 frontmatter
+            // 据设置决定是否添加 frontmatter
             const processedContent = this.settings.vitepress.addFrontmatter 
                 ? this.addVitepressFrontmatter(content)
                 : content;

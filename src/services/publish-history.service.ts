@@ -23,20 +23,23 @@ export class PublishHistoryService {
     }
 
     addRecord(record: PublishRecord) {
-        this.history.records[record.filePath] = record;
+        const key = `${record.filePath}:${record.platform}`;
+        this.history.records[key] = record;
         this.save();
     }
 
-    getRecord(filePath: string): PublishRecord | undefined {
-        return this.history.records[filePath];
+    getRecord(filePath: string, platform: string): PublishRecord | undefined {
+        const key = `${filePath}:${platform}`;
+        return this.history.records[key];
     }
 
     getAllRecords(): PublishRecord[] {
         return Object.values(this.history.records);
     }
 
-    removeRecord(filePath: string) {
-        delete this.history.records[filePath];
+    removeRecord(filePath: string, platform: string) {
+        const key = `${filePath}:${platform}`;
+        delete this.history.records[key];
         this.save();
     }
 
@@ -44,5 +47,10 @@ export class PublishHistoryService {
         return Object.values(this.history.records)
             .sort((a, b) => b.lastPublished - a.lastPublished)
             .slice(0, limit);
+    }
+
+    getFileRecords(filePath: string): PublishRecord[] {
+        return Object.values(this.history.records)
+            .filter(record => record.filePath === filePath);
     }
 } 
