@@ -66,7 +66,7 @@ export class SettingsTab extends PluginSettingTab {
 
         if (this.settings.githubEnabled) {
             // GitHub Token
-            const tokenSetting = new Setting(githubSection)
+            new Setting(githubSection)
                 .setName('GitHub Token')
                 .setDesc('用于访问 GitHub API 的个人访问令牌')
                 .addText(text => {
@@ -171,7 +171,7 @@ export class SettingsTab extends PluginSettingTab {
 
         if (this.settings.gitlabEnabled) {
             // GitLab Token
-            const tokenSetting = new Setting(gitlabSection)
+            new Setting(gitlabSection)
                 .setName('GitLab Token')
                 .setDesc('用于访问 GitLab API 的个人访问令牌')
                 .addText(text => {
