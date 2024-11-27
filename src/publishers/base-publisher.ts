@@ -1,3 +1,16 @@
+import * as fs from 'fs';
+
+/**
+ * 已发布笔记的接口定义
+ */
+export interface PublishedNote {
+    localPath: string;
+    remotePath: string;
+    platform: string;
+    status: 'success' | 'failed';
+    lastPublished?: string;
+}
+
 /**
  * 发布器的配置选项接口
  */
@@ -8,17 +21,14 @@ export interface PublisherOptions {
 
 /**
  * 发布器的抽象基类
- * 实现了基本的配置管理，要求子类实现具体的发布逻辑
  */
 export abstract class BasePublisher {
     protected options: PublisherOptions;
+    protected publishedNotesPath: string;
 
-    /**
-     * 创建发布器实例
-     * @param options - 发布器的配置选项
-     */
     constructor(options: PublisherOptions) {
         this.options = options;
+        this.publishedNotesPath = `${options.outputPath}/.published_notes.json`;
     }
 
     /**
@@ -37,4 +47,21 @@ export abstract class BasePublisher {
      * 获取发布器的描述信息
      */
     abstract getDescription(): string;
+
+    protected async loadPublishedNotes(): Promise<PublishedNote[]> {
+        try {
+            const data = await fs.promises.readFile(this.publishedNotesPath, 'utf-8');
+            return JSON.parse(data);
+        } catch {
+            return [];
+        }
+    }
+
+    protected async savePublishedNotes(notes: PublishedNote[]): Promise<void> {
+        await fs.promises.writeFile(
+            this.publishedNotesPath,
+            JSON.stringify(notes, null, 2),
+            'utf-8'
+        );
+    }
 } 

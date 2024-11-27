@@ -1,8 +1,9 @@
-import { BasePublisher } from './base-publisher';
+import { BasePublisher, PublishedNote } from './base-publisher';
 import { PluginSettings } from '../settings/settings.interface';
 import { GitHubService } from '../services/github.service';
 import { GitLabService } from '../services/gitlab.service';
 import ObsidianPublisher from '../main';
+import * as fs from 'fs';
 
 // 在类定义之前声明接口
 export interface DirectoryNode {
@@ -88,7 +89,7 @@ export class VitePressPublisher extends BasePublisher {
         path = path.replace(/\/+/g, '/');
         // 移除特殊字符
         path = path.replace(/[<>:"|?*\\]/g, '');
-        // 替换中文空格为普通空格，然后替换空格为连字符
+        // 替换中文空格为普通空格，然后替换空为连字符
         path = path.replace(/\u3000/g, ' ').replace(/\s+/g, '-');
         return path;
     }
@@ -112,6 +113,13 @@ export class VitePressPublisher extends BasePublisher {
      */
     async publish(content: string, filePath: string): Promise<void> {
         try {
+            // 检查本地文件是否存在，使用 app.vault.adapter.exists 来检查
+            const exists = await this.plugin.app.vault.adapter.exists(filePath);
+            if (!exists) {
+                await this.removePublishedNote(filePath);
+                throw new Error(`本地文件不存在: ${filePath}`);
+            }
+
             let finalPath = filePath;
 
             // 如果不保持文件结构，只使用文件名
@@ -211,7 +219,7 @@ layout: doc
     }
 
     /**
-     * 发布内容到指定目录
+     * 发布内容到指定目
      * @param content 要发布的内容
      * @param filePath 文件路径（已包含目标目录）
      * @param targetDir 目标目录
@@ -286,7 +294,7 @@ layout: doc
     }
 
     /**
-     * 获取仓库中的所有目录（包括子目录）
+     * 获取仓库中的有目录（包括子目录）
      * @returns 包含所有目录路径的数组
      */
     private async getAllDirectories(): Promise<DirectoryNode[]> {
@@ -394,6 +402,13 @@ layout: doc
      * 获取远程文件内容
      */
     async getRemoteContent(filePath: string): Promise<string> {
+        // 使用 Obsidian API 检查文件是否存在
+        const exists = await this.plugin.app.vault.adapter.exists(filePath);
+        if (!exists) {
+            await this.removePublishedNote(filePath);
+            throw new Error(`本地文件不存在: ${filePath}`);
+        }
+
         const service = this.getService();
         const remotePath = this.getRemotePath(filePath);
         return await service.getFileContent(remotePath);
@@ -403,9 +418,21 @@ layout: doc
      * 删除远程文件
      */
     async deleteRemote(filePath: string): Promise<void> {
-        const service = this.getService();
-        const remotePath = this.getRemotePath(filePath);
-        await service.deleteFile(remotePath, '从 Obsidian 删除文件');
+        try {
+            const service = this.getService();
+            const remotePath = this.getRemotePath(filePath);
+            
+            // 先删除远程文件
+            await service.deleteFile(remotePath, '从 Obsidian 删除文件');
+            
+            // 远程文件删除成功后，删除发布记录
+            await this.removePublishedNote(filePath);
+            
+            console.log(`成功删除远程文件: ${remotePath}`);
+        } catch (error) {
+            console.error('删除远程文件失败:', error);
+            throw error;
+        }
     }
 
     private getService(): GitHubService | GitLabService {
@@ -428,7 +455,7 @@ layout: doc
             return `${basePath}/${filePath}`;
         }
 
-        // 否则只使用文件名，放在基础路径下
+        // 否则只使用文件名，放基础���径下
         const fileName = filePath.split('/').pop() || '';
         return `${basePath}/${fileName}`;
     }
@@ -438,5 +465,45 @@ layout: doc
      */
     clearDirectoryCache() {
         this.directoryCache = null;
+    }
+
+    async getPublishedNotes(): Promise<PublishedNote[]> {
+        const publishedNotes = await this.loadPublishedNotes();
+        
+        // 使用 Obsidian API 检查文件是否存在
+        const validNotes = await Promise.all(
+            publishedNotes.map(async note => {
+                const exists = await this.plugin.app.vault.adapter.exists(note.localPath);
+                if (!exists) {
+                    await this.removePublishedNote(note.localPath);
+                }
+                return { note, exists };
+            })
+        );
+
+        return validNotes
+            .filter(({ exists }) => exists)
+            .map(({ note }) => note);
+    }
+
+    /**
+     * 从发布记录中删除笔记
+     */
+    private async removePublishedNote(localPath: string) {
+        try {
+            const publishedNotes = await this.loadPublishedNotes();
+            const updatedNotes = publishedNotes.filter(note => {
+                // 保留不是当前平台的记录，或者不是当前文件的记录
+                return note.platform !== this.settings.platform || note.localPath !== localPath;
+            });
+            
+            // 只有当记录确实发生变化时才保存
+            if (publishedNotes.length !== updatedNotes.length) {
+                await this.savePublishedNotes(updatedNotes);
+                console.log(`已从 ${this.settings.platform} 平台的发布记录中删除: ${localPath}`);
+            }
+        } catch (error) {
+            console.error('删除发布记录失败:', error);
+        }
     }
 } 
