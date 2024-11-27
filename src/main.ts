@@ -322,7 +322,13 @@ export default class ObsidianPublisher extends Plugin {
 		try {
 			const content = await this.app.vault.read(file);
 			const publisher = this.publishers.get('vitepress');
-			await publisher?.publishToDirectory(content, file.path, directory);
+			
+			// 构建远程路径：如果有选择目录，则将文件直接放在该目录下
+			const remotePath = directory 
+				? `${directory}/${file.name}`  // 直接使用文件名，而不是完整路径
+				: file.name;
+				
+			await publisher?.publishToDirectory(content, remotePath, directory);
 			new Notice('发布成功！');
 		} catch (error) {
 			new Notice(`发布失败：${error instanceof Error ? error.message : '未知错误'}`);

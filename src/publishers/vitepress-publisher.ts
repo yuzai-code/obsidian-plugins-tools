@@ -199,23 +199,41 @@ layout: doc
     /**
      * 发布内容到指定目录
      * @param content 要发布的内容
-     * @param filePath 文件路径
+     * @param filePath 文件路径（已包含目标目录）
      * @param targetDir 目标目录
      */
     async publishToDirectory(content: string, filePath: string, targetDir: string): Promise<void> {
         try {
-            // 根据设置决定是否保持文件结构
-            const fileName = this.settings.vitepress.keepFileStructure
-                ? filePath  // 保持完整路径
-                : filePath.split('/').pop() || '';  // 只使用文件名
-            
-            // 构建目标路径
-            const formattedDir = this.formatPath(targetDir);
-            const publishPath = `${formattedDir}/${fileName}`;
+            // filePath 已经包含了目标目录，直接使用它
+            const fullPath = `${this.settings.vitepressPath}/${filePath}`;
 
-            // 发布文件
-            await this.publish(content, publishPath);
+            // 根据设置决定是否添加 frontmatter
+            const processedContent = this.settings.vitepress.addFrontmatter 
+                ? this.addVitepressFrontmatter(content)
+                : content;
+
+            // 根据平台选择使用不同的服务
+            if (this.settings.platform === 'github' && this.githubService) {
+                await this.githubService.uploadFile(
+                    fullPath,
+                    processedContent,
+                    `Update ${filePath} via Obsidian Publisher`
+                );
+            } else if (this.settings.platform === 'gitlab' && this.gitlabService) {
+                await this.gitlabService.uploadFile(
+                    fullPath,
+                    processedContent,
+                    `Update ${filePath} via Obsidian Publisher`
+                );
+            } else {
+                throw new Error('未配置有效的发布平台');
+            }
+
+            // 记录发布成功
+            await this.recordPublishStatus(filePath, fullPath, true);
         } catch (error) {
+            // 记录发布失败
+            await this.recordPublishStatus(filePath, '', false);
             console.error('发布到目录失败:', error);
             throw error;
         }
