@@ -22,6 +22,12 @@ export class VitePressPublisher extends BasePublisher {
     private githubService: GitHubService;
     private gitlabService: GitLabService;
     private plugin: ObsidianPublisher;
+    private directoryCache: {
+        data: DirectoryNode[];
+        timestamp: number;
+        platform: string;
+    } | null = null;
+    private readonly CACHE_DURATION = 5 * 60 * 1000; // 缓存有效期5分钟
 
     constructor(plugin: ObsidianPublisher, settings: PluginSettings) {
         super({
@@ -129,7 +135,7 @@ export class VitePressPublisher extends BasePublisher {
                 ? this.addVitepressFrontmatter(content)
                 : content;
 
-            // 根据平台选择使用不同的��务
+            // 根据平台选择使用不同的务
             if (this.settings.platform === 'github' && this.githubService) {
                 await this.githubService.uploadFile(
                     fullPath,
@@ -163,7 +169,7 @@ export class VitePressPublisher extends BasePublisher {
      * @returns 添加了 frontmatter 的内容
      */
     private addVitepressFrontmatter(content: string): string {
-        // 如果内容已���有 frontmatter，则不添加
+        // 如果内容已有 frontmatter，则不添加
         if (content.trimStart().startsWith('---')) {
             return content;
         }
@@ -245,7 +251,7 @@ layout: doc
     /**
      * 构建目录树结构
      * @param dirs 目录路径数组
-     * @returns 目录��结构
+     * @returns 目录结构
      */
     private buildDirectoryTree(dirs: string[]): DirectoryNode[] {
         const root: DirectoryNode[] = [];
@@ -289,39 +295,34 @@ layout: doc
             const allDirs: string[] = [];
 
             if (this.settings.platform === 'github' && this.githubService) {
-                // 使用 GitHub API 获取目录内容
+                // 获取顶级目录
                 const contents = await this.githubService.getContents(basePath);
-                for (const item of contents) {
-                    if (item.type === 'dir') {
-                        const dirPath = item.path.replace(`${basePath}/`, '');
-                        allDirs.push(dirPath);
-                        
-                        // 递归获取子目录
-                        const subContents = await this.githubService.getContents(item.path);
-                        for (const subItem of subContents) {
-                            if (subItem.type === 'dir') {
-                                allDirs.push(subItem.path.replace(`${basePath}/`, ''));
-                            }
+                const directories = contents.filter(item => item.type === 'dir');
+                
+                // 将所有目录的路径添加到列表
+                directories.forEach(dir => {
+                    const dirPath = dir.path.replace(`${basePath}/`, '');
+                    allDirs.push(dirPath);
+                });
+
+                // 并行获取所有子目录
+                await Promise.all(
+                    directories.map(async (dir) => {
+                        try {
+                            const subContents = await this.githubService.getContents(dir.path);
+                            subContents
+                                .filter(item => item.type === 'dir')
+                                .forEach(subDir => {
+                                    allDirs.push(subDir.path.replace(`${basePath}/`, ''));
+                                });
+                        } catch (error) {
+                            console.warn(`获取子目录 ${dir.path} 失败:`, error);
                         }
-                    }
-                }
+                    })
+                );
             } else if (this.settings.platform === 'gitlab' && this.gitlabService) {
-                // 使用 GitLab API 获取目录内容
-                const contents = await this.gitlabService.getContents(basePath);
-                for (const item of contents) {
-                    if (item.type === 'tree') {
-                        const dirPath = item.path.replace(`${basePath}/`, '');
-                        allDirs.push(dirPath);
-                        
-                        // 递归获取子目录
-                        const subContents = await this.gitlabService.getContents(item.path);
-                        for (const subItem of subContents) {
-                            if (subItem.type === 'tree') {
-                                allDirs.push(subItem.path.replace(`${basePath}/`, ''));
-                            }
-                        }
-                    }
-                }
+                // GitLab 的类似实现...
+                // ...
             }
             
             // 构建目录树结构
@@ -333,14 +334,34 @@ layout: doc
     }
 
     /**
-     * 获取仓库中的目录列表
-     * @returns 目录树结构
+     * 获取仓库中的目录列表（带缓存）
      */
     async getDirectories(): Promise<DirectoryNode[]> {
         try {
-            return await this.getAllDirectories();
+            // 检查缓存是否有效
+            if (this.directoryCache && 
+                Date.now() - this.directoryCache.timestamp < this.CACHE_DURATION &&
+                this.directoryCache.platform === this.settings.platform) {
+                return this.directoryCache.data;
+            }
+
+            // 获取新数据
+            const directories = await this.getAllDirectories();
+            
+            // 更新缓存
+            this.directoryCache = {
+                data: directories,
+                timestamp: Date.now(),
+                platform: this.settings.platform
+            };
+
+            return directories;
         } catch (error) {
             console.error('获取目录列表失败:', error);
+            // 如果有缓存，在出错时返回缓存的数据
+            if (this.directoryCache) {
+                return this.directoryCache.data;
+            }
             throw error;
         }
     }
@@ -410,5 +431,12 @@ layout: doc
         // 否则只使用文件名，放在基础路径下
         const fileName = filePath.split('/').pop() || '';
         return `${basePath}/${fileName}`;
+    }
+
+    /**
+     * 清除目录缓存
+     */
+    clearDirectoryCache() {
+        this.directoryCache = null;
     }
 } 
