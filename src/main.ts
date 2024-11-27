@@ -1,9 +1,11 @@
 import { App, Plugin, Notice, Menu, TFile, PluginManifest } from 'obsidian';
 import { SettingsTab } from './settings/settings-tab';
 import { PluginSettings, DEFAULT_SETTINGS } from './settings/settings.interface';
-import { VitePressPublisher } from './publishers/vitepress-publisher';
+import { VitePressPublisher, DirectoryNode } from './publishers/vitepress-publisher';
 import { PublishHistoryService } from './services/publish-history.service';
 import { DashboardView, DASHBOARD_VIEW_TYPE } from './views/dashboard.view';
+import { SuggestModal } from 'obsidian';
+import { setIcon } from 'obsidian';
 
 /**
  * Obsidian 发布插件主类
@@ -75,7 +77,7 @@ export default class ObsidianPublisher extends Plugin {
 		// 添加设置标签页
 		this.addSettingTab(new SettingsTab(this.app, this));
 
-		// 添加功能按钮到编辑器菜单
+		// 添加功能钮到编辑器菜单
 		this.addRibbonIcon('paper-plane', '发布笔记', (evt: MouseEvent) => {
 			const menu = new Menu();
 
@@ -298,16 +300,63 @@ export default class ObsidianPublisher extends Plugin {
 					});
 			});
 
-			// 添加现有目录选项
-			for (const dir of directories) {
-				menu.addItem((item) => {
-					item
-						.setTitle(dir)
-						.onClick(async () => {
-							await this.publishToSelectedDirectory(activeFile, dir);
-						});
+			// 递归创建目录菜单
+			const createDirectoryMenu = (parentMenu: Menu, dir: DirectoryNode) => {
+				parentMenu.addItem((item) => {
+					const hasChildren = dir.children.length > 0;
+					
+					// 使用 setTitle 来设置带缩进的文本
+					const indent = '  '.repeat(dir.level);
+					item.setTitle(indent + dir.name);
+					
+					// 设置图标
+					if (hasChildren) {
+						item.setIcon('chevron-right');
+					} else {
+						item.setIcon('folder');
+					}
+					
+					// 处理点击事件
+					item.onClick(async (evt: MouseEvent) => {
+						const target = evt.target as HTMLElement;
+						const menuItem = target.closest('.menu-item');
+						if (!menuItem) return;
+						
+						// 获取图标区域的位置
+						const iconEl = menuItem.querySelector('.svg-icon');
+						if (!iconEl) return;
+						
+						const iconRect = iconEl.getBoundingClientRect();
+						const clickX = evt.clientX;
+						
+						// 扩大图标的点击区域，左右各增加 10px
+						const expandedIconArea = {
+							left: iconRect.left - 10,
+							right: iconRect.right + 10
+						};
+						
+						// 如果点击在扩展的图标区域内且有子目录，则展开子菜单
+						if (hasChildren && clickX >= expandedIconArea.left && clickX <= expandedIconArea.right) {
+							evt.stopPropagation();
+							const subMenu = new Menu();
+							dir.children.forEach(child => createDirectoryMenu(subMenu, child));
+							
+							// 计算子菜单的位置
+							const rect = menuItem.getBoundingClientRect();
+							subMenu.showAtPosition({
+								x: rect.right,
+								y: rect.top
+							});
+						} else {
+							// 如果点击在图标区域外，则执行发布操作
+							await this.publishToSelectedDirectory(activeFile, dir.path);
+						}
+					});
 				});
-			}
+			};
+
+			// 创建顶级目录
+			directories.forEach(dir => createDirectoryMenu(menu, dir));
 
 			menu.showAtMouseEvent(evt);
 		} catch (error) {
@@ -318,17 +367,17 @@ export default class ObsidianPublisher extends Plugin {
 	/**
 	 * 发布到选定的目录
 	 */
-	private async publishToSelectedDirectory(file: TFile, directory: string) {
+	private async publishToSelectedDirectory(file: TFile, dirPath: string) {
 		try {
 			const content = await this.app.vault.read(file);
 			const publisher = this.publishers.get('vitepress');
 			
 			// 构建远程路径：如果有选择目录，则将文件直接放在该目录下
-			const remotePath = directory 
-				? `${directory}/${file.name}`  // 直接使用文件名，而不是完整路径
+			const remotePath = dirPath 
+				? `${dirPath}/${file.name}`  // 直接使用文件名，而不是完整路径
 				: file.name;
 				
-			await publisher?.publishToDirectory(content, remotePath, directory);
+			await publisher?.publishToDirectory(content, remotePath, dirPath);
 			new Notice('发布成功！');
 		} catch (error) {
 			new Notice(`发布失败：${error instanceof Error ? error.message : '未知错误'}`);
@@ -424,6 +473,61 @@ export default class ObsidianPublisher extends Plugin {
 		} catch (error) {
 			new Notice(`发布失败: ${error instanceof Error ? error.message : '未知错误'}`);
 		}
+	}
+
+	/**
+	 * 显示目录选择器并发布到选定目录
+	 */
+	async showDirectorySelector(activeFile: TFile) {
+		const publisher = this.getPublisher();
+		if (!publisher) return;
+
+		try {
+			const directories = await publisher.getDirectories();
+			const modal = new DirectoryModal(
+				this.app,
+				directories,
+				async (dir: DirectoryNode) => {
+					await this.publishToSelectedDirectory(activeFile, dir.path);
+				}
+			);
+			modal.open();
+		} catch (error) {
+			console.error('获取目录列表失败:', error);
+			new Notice('获取目录列表失败');
+		}
+	}
+
+	/**
+	 * 获取发布器
+	 */
+	private getPublisher(): VitePressPublisher | undefined {
+		return this.publishers.get('vitepress');
+	}
+}
+
+class DirectoryModal extends SuggestModal<DirectoryNode> {
+	private directories: DirectoryNode[];
+	private onSelect: (dir: DirectoryNode) => void;
+
+	constructor(app: App, directories: DirectoryNode[], onSelect: (dir: DirectoryNode) => void) {
+		super(app);
+		this.directories = directories;
+		this.onSelect = onSelect;
+		this.setPlaceholder('选择目标目录');
+	}
+
+	getSuggestions(): DirectoryNode[] {
+		return this.directories;
+	}
+
+	renderSuggestion(dir: DirectoryNode, el: HTMLElement) {
+		const indent = '  '.repeat(dir.level);
+		el.setText(indent + dir.name);
+	}
+
+	onChooseSuggestion(dir: DirectoryNode) {
+		this.onSelect(dir);
 	}
 }
 

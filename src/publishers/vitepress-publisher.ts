@@ -4,6 +4,14 @@ import { GitHubService } from '../services/github.service';
 import { GitLabService } from '../services/gitlab.service';
 import ObsidianPublisher from '../main';
 
+// 在类定义之前声明接口
+export interface DirectoryNode {
+    path: string;
+    name: string;
+    children: DirectoryNode[];
+    level: number;
+}
+
 /**
  * VitePress 发布器实现类
  * 负责将内容发布到 VitePress 站点
@@ -121,7 +129,7 @@ export class VitePressPublisher extends BasePublisher {
                 ? this.addVitepressFrontmatter(content)
                 : content;
 
-            // 根据平台选择使用不同的服务
+            // 根据平台选择使用不同的��务
             if (this.settings.platform === 'github' && this.githubService) {
                 await this.githubService.uploadFile(
                     fullPath,
@@ -155,7 +163,7 @@ export class VitePressPublisher extends BasePublisher {
      * @returns 添加了 frontmatter 的内容
      */
     private addVitepressFrontmatter(content: string): string {
-        // 如果内容已经有 frontmatter，则不添加
+        // 如果内容已���有 frontmatter，则不添加
         if (content.trimStart().startsWith('---')) {
             return content;
         }
@@ -204,30 +212,25 @@ layout: doc
      */
     async publishToDirectory(content: string, filePath: string, targetDir: string): Promise<void> {
         try {
-            // filePath 已经包含了目标目录，直接使用它
-            const fullPath = `${this.settings.vitepressPath}/${filePath}`;
+            // 构建目标路径（支持多级目录）
+            const fileName = this.settings.vitepress.keepFileStructure
+                ? filePath.split('/').pop() || ''  // 只取文件名
+                : filePath;
+            
+            // 组合完整路径，确保路径格式正确
+            const fullPath = this.formatPath(`${this.settings.vitepressPath}/${targetDir}/${fileName}`);
 
             // 根据设置决定是否添加 frontmatter
             const processedContent = this.settings.vitepress.addFrontmatter 
                 ? this.addVitepressFrontmatter(content)
                 : content;
 
-            // 根据平台选择使用不同的服务
-            if (this.settings.platform === 'github' && this.githubService) {
-                await this.githubService.uploadFile(
-                    fullPath,
-                    processedContent,
-                    `Update ${filePath} via Obsidian Publisher`
-                );
-            } else if (this.settings.platform === 'gitlab' && this.gitlabService) {
-                await this.gitlabService.uploadFile(
-                    fullPath,
-                    processedContent,
-                    `Update ${filePath} via Obsidian Publisher`
-                );
-            } else {
-                throw new Error('未配置有效的发布平台');
-            }
+            const service = this.getService();
+            await service.uploadFile(
+                fullPath,
+                processedContent,
+                `Update ${fileName} via Obsidian Publisher`
+            );
 
             // 记录发布成功
             await this.recordPublishStatus(filePath, fullPath, true);
@@ -240,16 +243,102 @@ layout: doc
     }
 
     /**
-     * 获取仓库中的目录列表
+     * 构建目录树结构
+     * @param dirs 目录路径数组
+     * @returns 目录��结构
      */
-    async getDirectories(): Promise<string[]> {
-        try {
-            if (this.settings.platform === 'github' && this.githubService) {
-                return await this.githubService.getDirectories(this.settings.vitepressPath);
-            } else if (this.settings.platform === 'gitlab' && this.gitlabService) {
-                return await this.gitlabService.getDirectories(this.settings.vitepressPath);
+    private buildDirectoryTree(dirs: string[]): DirectoryNode[] {
+        const root: DirectoryNode[] = [];
+        
+        for (const dir of dirs) {
+            const parts = dir.split('/');
+            let currentLevel = root;
+            let currentPath = '';
+            let level = 0;
+            
+            for (const part of parts) {
+                currentPath = currentPath ? `${currentPath}/${part}` : part;
+                const existing = currentLevel.find(node => node.name === part);
+                
+                if (existing) {
+                    currentLevel = existing.children;
+                } else {
+                    const newNode: DirectoryNode = {
+                        path: currentPath,
+                        name: part,
+                        children: [],
+                        level: level
+                    };
+                    currentLevel.push(newNode);
+                    currentLevel = newNode.children;
+                }
+                level++;
             }
-            throw new Error('未配置有效的发布平台');
+        }
+        
+        return root;
+    }
+
+    /**
+     * 获取仓库中的所有目录（包括子目录）
+     * @returns 包含所有目录路径的数组
+     */
+    private async getAllDirectories(): Promise<DirectoryNode[]> {
+        try {
+            const basePath = this.settings.vitepressPath;
+            const allDirs: string[] = [];
+
+            if (this.settings.platform === 'github' && this.githubService) {
+                // 使用 GitHub API 获取目录内容
+                const contents = await this.githubService.getContents(basePath);
+                for (const item of contents) {
+                    if (item.type === 'dir') {
+                        const dirPath = item.path.replace(`${basePath}/`, '');
+                        allDirs.push(dirPath);
+                        
+                        // 递归获取子目录
+                        const subContents = await this.githubService.getContents(item.path);
+                        for (const subItem of subContents) {
+                            if (subItem.type === 'dir') {
+                                allDirs.push(subItem.path.replace(`${basePath}/`, ''));
+                            }
+                        }
+                    }
+                }
+            } else if (this.settings.platform === 'gitlab' && this.gitlabService) {
+                // 使用 GitLab API 获取目录内容
+                const contents = await this.gitlabService.getContents(basePath);
+                for (const item of contents) {
+                    if (item.type === 'tree') {
+                        const dirPath = item.path.replace(`${basePath}/`, '');
+                        allDirs.push(dirPath);
+                        
+                        // 递归获取子目录
+                        const subContents = await this.gitlabService.getContents(item.path);
+                        for (const subItem of subContents) {
+                            if (subItem.type === 'tree') {
+                                allDirs.push(subItem.path.replace(`${basePath}/`, ''));
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // 构建目录树结构
+            return this.buildDirectoryTree(allDirs.sort());
+        } catch (error) {
+            console.error('获取目录列表失败:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * 获取仓库中的目录列表
+     * @returns 目录树结构
+     */
+    async getDirectories(): Promise<DirectoryNode[]> {
+        try {
+            return await this.getAllDirectories();
         } catch (error) {
             console.error('获取目录列表失败:', error);
             throw error;

@@ -5,6 +5,12 @@ interface GitHubConfig {
     branch?: string;
 }
 
+interface GitHubContent {
+    type: 'file' | 'dir';
+    path: string;
+    name: string;
+}
+
 export class GitHubService {
     private config: GitHubConfig;
 
@@ -157,6 +163,41 @@ export class GitHubService {
             }
         } catch (error) {
             throw new Error(`删除文件失败: ${error instanceof Error ? error.message : '未知错误'}`);
+        }
+    }
+
+    /**
+     * 获取目录内容
+     * @param path 目录路径
+     * @returns 目录内容列表
+     */
+    async getContents(path: string): Promise<GitHubContent[]> {
+        try {
+            const apiUrl = `https://api.github.com/repos/${this.config.username}/${this.config.repo}/contents/${path}`;
+            const response = await fetch(apiUrl, {
+                headers: this.getHeaders(),
+                method: 'GET'
+            });
+
+            if (!response.ok) {
+                throw new Error(`获取目录内容失败: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            
+            // 确保返回的是数组
+            if (!Array.isArray(data)) {
+                return [];
+            }
+
+            return data.map((item: { type: string; path: string; name: string; }) => ({
+                type: item.type === 'dir' ? 'dir' : 'file',
+                path: item.path,
+                name: item.name
+            }));
+        } catch (error) {
+            console.error('获取 GitHub 目录内容失败:', error);
+            throw error;
         }
     }
 } 

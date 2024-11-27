@@ -5,6 +5,12 @@ interface GitLabConfig {
     branch?: string;
 }
 
+interface GitLabContent {
+    type: 'tree' | 'blob';
+    path: string;
+    name: string;
+}
+
 export class GitLabService {
     private config: GitLabConfig;
     private api: any; // 根据你使用的 GitLab API 客户端类型来定义具体类型
@@ -169,6 +175,31 @@ export class GitLabService {
                 success: false,
                 message: `配置验证出错: ${error.message}`
             };
+        }
+    }
+
+    /**
+     * 获取目录内容
+     * @param path 目录路径
+     * @returns 目录内容列表
+     */
+    async getContents(path: string): Promise<GitLabContent[]> {
+        try {
+            const response = await this.api.get(`/projects/${this.config.projectId}/repository/tree`, {
+                params: {
+                    path: path,
+                    ref: this.config.branch
+                }
+            });
+
+            return response.data.map((item: any) => ({
+                type: item.type,  // GitLab 已经使用 'tree' 和 'blob'
+                path: item.path,
+                name: item.name
+            }));
+        } catch (error) {
+            console.error('获取 GitLab 目录内容失败:', error);
+            throw error;
         }
     }
 } 
