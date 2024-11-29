@@ -5,7 +5,6 @@ import { VitePressPublisher, DirectoryNode } from './publishers/vitepress-publis
 import { PublishHistoryService } from './services/publish-history.service';
 import { DashboardView, DASHBOARD_VIEW_TYPE } from './views/dashboard.view';
 import { SuggestModal } from 'obsidian';
-import { setIcon } from 'obsidian';
 
 /**
  * Obsidian 发布插件主类
@@ -414,8 +413,13 @@ export default class ObsidianPublisher extends Plugin {
 
 	/**
 	 * 初始化发布器
+	 * 从私有方法变更为公开方法，允许外部调用
 	 */
-	private initializePublishers() {
+	public initializePublishers() {
+		// 清空现有发布器
+		this.publishers.clear();
+
+		// 根据设置初始化 VitePress 发布器
 		if (this.settings.vitepress.enabled) {
 			if (this.settings.platform === 'github' && !this.settings.githubEnabled) {
 				new Notice('GitHub 发布功能未启用');
@@ -537,5 +541,3 @@ class DirectoryModal extends SuggestModal<DirectoryNode> {
 		this.onSelect(dir);
 	}
 }
-
-

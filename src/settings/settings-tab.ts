@@ -264,12 +264,15 @@ export class SettingsTab extends PluginSettingTab {
         // VitePress 启用开关
         new Setting(vitepressSection)
             .setName('启用 VitePress')
-            .setDesc('启用 VitePress 发布功能')
+            .setDesc('是否启用 VitePress 发布功能')
             .addToggle(toggle => toggle
                 .setValue(this.settings.vitepress.enabled)
                 .onChange(async (value) => {
                     this.settings.vitepress.enabled = value;
                     await this.plugin.saveSettings();
+                    // 重新初始化发布器
+                    this.plugin.initializePublishers();
+                    new Notice('VitePress设置已更新');
                 }));
 
         // VitePress 路径
@@ -331,4 +334,4 @@ export class SettingsTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 }));
     }
-} 
+}
