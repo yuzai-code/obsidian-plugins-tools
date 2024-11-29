@@ -11,6 +11,8 @@ export interface DirectoryNode {
     name: string;
     children: DirectoryNode[];
     level: number;
+    loaded: boolean;
+    isLoading: boolean;
 }
 
 /**
@@ -281,7 +283,9 @@ layout: doc
                         path: currentPath,
                         name: part,
                         children: [],
-                        level: level
+                        level: level,
+                        loaded: false,
+                        isLoading: false
                     };
                     currentLevel.push(newNode);
                     currentLevel = newNode.children;
@@ -294,8 +298,7 @@ layout: doc
     }
 
     /**
-     * 获取仓库中的有目录（包括子目录）
-     * @returns 包含所有目录路径的数组
+     * 获取仓库中的顶级目录
      */
     private async getAllDirectories(): Promise<DirectoryNode[]> {
         try {
@@ -303,40 +306,53 @@ layout: doc
             const allDirs: string[] = [];
 
             if (this.settings.platform === 'github' && this.githubService) {
-                // 获取顶级目录
+                // 只获取顶级目录
                 const contents = await this.githubService.getContents(basePath);
                 const directories = contents.filter(item => item.type === 'dir');
                 
-                // 将所有目录的路径添加到列表
+                // 只添加顶级目录
                 directories.forEach(dir => {
                     const dirPath = dir.path.replace(`${basePath}/`, '');
                     allDirs.push(dirPath);
                 });
-
-                // 并行获取所有子目录
-                await Promise.all(
-                    directories.map(async (dir) => {
-                        try {
-                            const subContents = await this.githubService.getContents(dir.path);
-                            subContents
-                                .filter(item => item.type === 'dir')
-                                .forEach(subDir => {
-                                    allDirs.push(subDir.path.replace(`${basePath}/`, ''));
-                                });
-                        } catch (error) {
-                            console.warn(`获取子目录 ${dir.path} 失败:`, error);
-                        }
-                    })
-                );
             } else if (this.settings.platform === 'gitlab' && this.gitlabService) {
-                // GitLab 的类似实现...
-                // ...
+                // GitLab 的实现...
             }
             
-            // 构建目录树结构
             return this.buildDirectoryTree(allDirs.sort());
         } catch (error) {
             console.error('获取目录列表失败:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * 加载指定目录的子目录
+     * @param dirPath 要加载子目录的目录路径
+     */
+    async loadSubDirectories(dirPath: string): Promise<DirectoryNode[]> {
+        try {
+            const basePath = this.settings.vitepressPath;
+            const fullPath = `${basePath}/${dirPath}`;
+            const subDirs: string[] = [];
+
+            if (this.settings.platform === 'github' && this.githubService) {
+                const contents = await this.githubService.getContents(fullPath);
+                const directories = contents.filter(item => item.type === 'dir');
+                
+                directories.forEach(dir => {
+                    const dirPath = dir.path.replace(`${basePath}/`, '');
+                    subDirs.push(dirPath);
+                });
+
+                // 构建子目录树
+                const subTree = this.buildDirectoryTree(subDirs.sort());
+                return subTree;
+            }
+
+            return [];
+        } catch (error) {
+            console.error(`加载子目录失败 ${dirPath}:`, error);
             throw error;
         }
     }
@@ -455,7 +471,7 @@ layout: doc
             return `${basePath}/${filePath}`;
         }
 
-        // 否则只使用文件名，放基础���径下
+        // 否则只使用文件名，放基础径下
         const fileName = filePath.split('/').pop() || '';
         return `${basePath}/${fileName}`;
     }
