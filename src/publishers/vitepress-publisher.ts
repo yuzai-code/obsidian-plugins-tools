@@ -3,7 +3,6 @@ import { PluginSettings } from '../settings/settings.interface';
 import { GitHubService } from '../services/github.service';
 import { GitLabService } from '../services/gitlab.service';
 import ObsidianPublisher from '../main';
-import * as fs from 'fs';
 
 // 在类定义之前声明接口
 export interface DirectoryNode {
@@ -303,13 +302,15 @@ layout: doc
     private async getAllDirectories(): Promise<DirectoryNode[]> {
         try {
             const basePath = this.settings.vitepressPath;
+            console.log(basePath);
             const allDirs: string[] = [];
 
             if (this.settings.platform === 'github' && this.githubService) {
                 // 只获取顶级目录
                 const contents = await this.githubService.getContents(basePath);
+                console.log(`output->contents`,contents);
                 const directories = contents.filter(item => item.type === 'dir');
-                
+                console.log(`output->directories`,directories);
                 // 只添加顶级目录
                 directories.forEach(dir => {
                     const dirPath = dir.path.replace(`${basePath}/`, '');

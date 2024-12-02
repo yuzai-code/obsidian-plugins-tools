@@ -291,7 +291,7 @@ export default class ObsidianPublisher extends Plugin {
 			const loadingNotice = new Notice('正在获取目录列表...', 0);
 			
 			const directories = await publisher.getDirectories();
-			
+			console.log(directories);
 			// 关闭加载提示
 			loadingNotice.hide();
 			

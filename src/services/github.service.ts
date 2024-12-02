@@ -174,6 +174,7 @@ export class GitHubService {
     async getContents(path: string): Promise<GitHubContent[]> {
         try {
             const apiUrl = `https://api.github.com/repos/${this.config.username}/${this.config.repo}/contents/${path}`;
+            console.log(`output->apiUrl`,apiUrl);
             const response = await fetch(apiUrl, {
                 headers: this.getHeaders(),
                 method: 'GET'
@@ -184,6 +185,7 @@ export class GitHubService {
             }
 
             const data = await response.json();
+            console.log(`output->data`,data)
             
             // 确保返回的是数组
             if (!Array.isArray(data)) {
