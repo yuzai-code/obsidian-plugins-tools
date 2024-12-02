@@ -202,4 +202,38 @@ export class GitHubService {
             throw error;
         }
     }
+
+    /**
+     * 获取目录内容，并检查子目录是否为空
+     * @param path 目录路径
+     * @returns 扩展的目录内容列表
+     */
+    async getContentsWithSubDirCheck(path: string): Promise<(GitHubContent & { hasSubDirs?: boolean })[]> {
+        const contents = await this.getContents(path);
+        
+        // 对于每个目录类型的项目，检查其是否包含子内容
+        const contentsWithCheck = await Promise.all(contents.map(async item => {
+            if (item.type === 'dir') {
+                try {
+                    const subContents = await this.getContents(item.path);
+                    return {
+                        ...item,
+                        hasSubDirs: subContents.length > 0
+                    };
+                } catch (error) {
+                    console.warn(`检查子目录 ${item.path} 失败:`, error);
+                    return {
+                        ...item,
+                        hasSubDirs: false
+                    };
+                }
+            }
+            return {
+                ...item,
+                hasSubDirs: false
+            };
+        }));
+
+        return contentsWithCheck;
+    }
 } 
