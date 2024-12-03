@@ -8,10 +8,12 @@ import ObsidianPublisher from '../main';
 export interface DirectoryNode {
     path: string;
     name: string;
+    type: 'file' | 'dir';  // 添加类型区分
     children: DirectoryNode[];
     level: number;
-    loaded: boolean;
-    isLoading: boolean;
+    hasChildren?: boolean;  // 是否可能有子内容
+    isLoading: boolean;    
+    loaded: boolean;      
 }
 
 /**
@@ -297,30 +299,27 @@ layout: doc
     }
 
     /**
-     * 获取仓库中的顶级目录
+     * 获取仓库中的顶级内容
      */
     private async getAllDirectories(): Promise<DirectoryNode[]> {
         try {
             const basePath = this.settings.vitepressPath;
-            console.log(basePath);
-            const allDirs: string[] = [];
-
-            if (this.settings.platform === 'github' && this.githubService) {
-                // 只获取顶级目录
-                const contents = await this.githubService.getContents(basePath);
-                console.log(`output->contents`,contents);
-                const directories = contents.filter(item => item.type === 'dir');
-                console.log(`output->directories`,directories);
-                // 只添加顶级目录
-                directories.forEach(dir => {
-                    const dirPath = dir.path.replace(`${basePath}/`, '');
-                    allDirs.push(dirPath);
-                });
-            } else if (this.settings.platform === 'gitlab' && this.gitlabService) {
-                // GitLab 的实现...
-            }
+            const service = this.getService();
             
-            return this.buildDirectoryTree(allDirs.sort());
+            // 获取顶级目录内容
+            const contents = await service.getContentsWithSubDirCheck(basePath);
+            
+            // 转换为 DirectoryNode 格式
+            return contents.map(item => ({
+                path: item.path.replace(`${basePath}/`, ''),
+                name: item.name,
+                type: item.type,
+                children: [],
+                level: 0,
+                hasChildren: item.type === 'dir' && item.hasSubDirs,
+                isLoading: false,
+                loaded: false
+            }));
         } catch (error) {
             console.error('获取目录列表失败:', error);
             throw error;
@@ -328,30 +327,29 @@ layout: doc
     }
 
     /**
-     * 加载指定目录的子目录
-     * @param dirPath 要加载子目录的目录路径
+     * 加载指定目录的子内容
      */
     async loadSubDirectories(dirPath: string): Promise<DirectoryNode[]> {
         try {
             const basePath = this.settings.vitepressPath;
             const fullPath = `${basePath}/${dirPath}`;
-            const subDirs: string[] = [];
-
-            if (this.settings.platform === 'github' && this.githubService) {
-                const contents = await this.githubService.getContents(fullPath);
-                const directories = contents.filter(item => item.type === 'dir');
-                
-                directories.forEach(dir => {
-                    const dirPath = dir.path.replace(`${basePath}/`, '');
-                    subDirs.push(dirPath);
-                });
-
-                // 构建子目录树
-                const subTree = this.buildDirectoryTree(subDirs.sort());
-                return subTree;
-            }
-
-            return [];
+            const service = this.getService();
+            
+            // 获取子目录内容
+            const contents = await service.getContentsWithSubDirCheck(fullPath);
+            const level = dirPath.split('/').length;
+            
+            // 转换所有内容（包括文件和目录）
+            return contents.map(item => ({
+                path: item.path.replace(`${basePath}/`, ''),
+                name: item.name,
+                type: item.type,
+                children: [],
+                level: level,
+                hasChildren: item.type === 'dir' && item.hasSubDirs,
+                isLoading: false,
+                loaded: false
+            }));
         } catch (error) {
             console.error(`加载子目录失败 ${dirPath}:`, error);
             throw error;

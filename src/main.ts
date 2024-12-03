@@ -234,7 +234,7 @@ export default class ObsidianPublisher extends Plugin {
 		// 一键发布选项
 		menu.addItem((item) => {
 			item
-				.setTitle(`一键发布到 ${this.settings.platform === 'github' ? 'GitHub' : 'GitLab'}`)
+				.setTitle(`一键布到 ${this.settings.platform === 'github' ? 'GitHub' : 'GitLab'}`)
 				.setIcon('rocket')
 				.onClick(async () => {
 					const activeFile = this.app.workspace.getActiveFile();
@@ -287,82 +287,72 @@ export default class ObsidianPublisher extends Plugin {
 		}
 
 		try {
-			// 显示加载提示
 			const loadingNotice = new Notice('正在获取目录列表...', 0);
-			
 			const directories = await publisher.getDirectories();
-			console.log(directories);
-			// 关闭加载提示
 			loadingNotice.hide();
 			
 			const menu = new Menu();
 
-			// 添加根目录选项
-			menu.addItem((item) => {
-				item
-					.setTitle('根目录')
-					.onClick(async () => {
-						await this.publishToSelectedDirectory(activeFile, '');
-					});
-			});
-
 			// 递归创建目录菜单
-			const createDirectoryMenu = (parentMenu: Menu, dir: DirectoryNode) => {
-				parentMenu.addItem((item) => {
-					const hasChildren = dir.children.length > 0;
+			const createDirectoryMenu = (parentMenu: Menu, item: DirectoryNode) => {
+				parentMenu.addItem((menuItem) => {
+					const indent = '  '.repeat(item.level);
+					menuItem.setTitle(indent + item.name);
 					
-					// 使用 setTitle 来设置带缩进的文本
-					const indent = '  '.repeat(dir.level);
-					item.setTitle(indent + dir.name);
-					
-					// 设置图标
-					if (hasChildren) {
-						item.setIcon('chevron-right');
+					if (item.type === 'dir') {
+						menuItem.setIcon(item.hasChildren ? 'chevron-right' : 'folder');
 					} else {
-						item.setIcon('folder');
+						menuItem.setIcon('document');
 					}
 					
-					// 处理点击事件
-					item.onClick(async (evt: MouseEvent) => {
-						const target = evt.target as HTMLElement;
-						const menuItem = target.closest('.menu-item');
-						if (!menuItem) return;
-						
-						// 获取图标区域的位置
-						const iconEl = menuItem.querySelector('.svg-icon');
-						if (!iconEl) return;
-						
-						const iconRect = iconEl.getBoundingClientRect();
-						const clickX = evt.clientX;
-						
-						// 扩大图标的点击区域，左右各增加 10px
-						const expandedIconArea = {
-							left: iconRect.left - 10,
-							right: iconRect.right + 10
-						};
-						
-						// 如果点击在扩展的图标区域内且有子目录，则展开子菜单
-						if (hasChildren && clickX >= expandedIconArea.left && clickX <= expandedIconArea.right) {
-							evt.stopPropagation();
-							const subMenu = new Menu();
-							dir.children.forEach(child => createDirectoryMenu(subMenu, child));
+					menuItem.onClick(async (evt: MouseEvent) => {
+						if (item.type === 'file') {
+							// 如果选择的是文件，显示提示
+							new Notice('请选择目录进行发布，不能选择文件');
+							return;
+						}
+
+						if (item.type === 'dir' && item.hasChildren) {
+							const target = evt.target as HTMLElement;
+							const iconEl = target.closest('.menu-item')?.querySelector('.svg-icon');
+							if (!iconEl) return;
 							
-							// 计算子菜单的位置
-							const rect = menuItem.getBoundingClientRect();
-							subMenu.showAtPosition({
-								x: rect.right,
-								y: rect.top
-							});
-						} else {
-							// 如果点击在图标区域外，则执行发布操作
-							await this.publishToSelectedDirectory(activeFile, dir.path);
+							const iconRect = iconEl.getBoundingClientRect();
+							const clickX = evt.clientX;
+							
+							// 如果点击在图标区域，展开子菜单
+							if (clickX >= iconRect.left - 10 && clickX <= iconRect.right + 10) {
+								evt.stopPropagation();
+								
+								if (!item.loaded) {
+									item.isLoading = true;
+									const subItems = await publisher.loadSubDirectories(item.path);
+									item.children = subItems;
+									item.loaded = true;
+									item.isLoading = false;
+								}
+								
+								const subMenu = new Menu();
+								item.children.forEach(child => createDirectoryMenu(subMenu, child));
+								
+								const rect = target.closest('.menu-item')?.getBoundingClientRect();
+								if (rect) {
+									subMenu.showAtPosition({ x: rect.right, y: rect.top });
+								}
+							} else {
+								// 点击目录名称时执行发布
+								await this.publishToSelectedDirectory(activeFile, item.path);
+							}
+						} else if (item.type === 'dir') {
+							// 普通目录直接发布
+							await this.publishToSelectedDirectory(activeFile, item.path);
 						}
 					});
 				});
 			};
 
-			// 创建顶级目录
-			directories.forEach(dir => createDirectoryMenu(menu, dir));
+			// 创建顶级目录和文件列表
+			directories.forEach(item => createDirectoryMenu(menu, item));
 
 			menu.showAtMouseEvent(evt);
 		} catch (error) {
