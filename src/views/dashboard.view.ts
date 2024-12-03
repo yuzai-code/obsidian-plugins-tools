@@ -512,80 +512,6 @@ export class DashboardView extends ItemView {
                 }
             }
 
-            // GitLab 发布信息
-            const gitlabRecord = noteRecords.find(r => r.platform === 'gitlab');
-            if (gitlabRecord) {
-                const gitlabInfo = platformsList.createEl('div', { cls: 'platform-info' });
-                const gitlabHeader = gitlabInfo.createEl('div', { cls: 'platform-header' });
-                
-                gitlabHeader.createEl('div', { 
-                    cls: `platform-name gitlab ${gitlabRecord.status === 'success' ? '' : 'error'}`,
-                    text: `GitLab ${gitlabRecord.status === 'success' ? '' : '(发布失败)'}`
-                });
-
-                const gitlabActions = gitlabHeader.createEl('div', { cls: 'platform-actions' });
-                
-                // 只有发布成功的才显示更新和删除按钮
-                if (gitlabRecord.status === 'success') {
-                    // 更新按钮
-                    const updateBtn = gitlabActions.createEl('button', {
-                        cls: 'action-button update',
-                        attr: {
-                            'aria-label': '从远程更新'
-                        }
-                    });
-                    setIcon(updateBtn, 'download');
-                    
-                    // 删除按钮
-                    const deleteBtn = gitlabActions.createEl('button', {
-                        cls: 'action-button delete',
-                        attr: {
-                            'aria-label': '从远程删除'
-                        }
-                    });
-                    setIcon(deleteBtn, 'trash');
-
-                    // 添加按钮事件
-                    updateBtn.addEventListener('click', async (e) => {
-                        e.stopPropagation();
-                        await this.onUpdateFromRemote(filePath, 'gitlab');
-                    });
-
-                    deleteBtn.addEventListener('click', async (e) => {
-                        e.stopPropagation();
-                        await this.onDeleteFromRemote(filePath, 'gitlab');
-                    });
-                }
-
-                // 重新发布按钮（总是显示）
-                const republishBtn = gitlabActions.createEl('button', {
-                    cls: 'action-button republish',
-                    attr: {
-                        'aria-label': '重新发布'
-                    }
-                });
-                setIcon(republishBtn, 'upload');
-                
-                republishBtn.addEventListener('click', async (e) => {
-                    e.stopPropagation();
-                    await this.onRepublish(filePath, 'gitlab');
-                });
-
-                if (gitlabRecord.status === 'success') {
-                    gitlabInfo.createEl('div', { 
-                        cls: 'publish-time',
-                        text: `发布时间: ${new Date(gitlabRecord.lastPublished).toLocaleString()}`
-                    });
-                    
-                    if (gitlabRecord.remotePath) {
-                        gitlabInfo.createEl('div', { 
-                            cls: 'remote-path',
-                            text: `远程路径: ${gitlabRecord.remotePath}`
-                        });
-                    }
-                }
-            }
-
             // 添加展开/折叠事件
             titleBar.addEventListener('click', () => {
                 const isHidden = detailsPanel.hasClass('hidden');
@@ -766,5 +692,13 @@ export class DashboardView extends ItemView {
         }
         
         return groups;
+    }
+
+    getPlatformIcon(platform: string) {
+        return 'github';
+    }
+
+    getPlatformName(platform: string) {
+        return 'GitHub';
     }
 } 

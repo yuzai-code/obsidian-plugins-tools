@@ -1,7 +1,7 @@
 export interface PublishRecord {
     filePath: string;          // 本地文件路径
     remotePath: string;        // 远程文件路径
-    platform: 'github' | 'gitlab'; // 发布平台
+    platform: 'github';        // 发布平台
     lastPublished: number;     // 最后发布时间戳
     status: 'success' | 'failed'; // 发布状态
     fileHash?: string;         // 文件内容哈希，用于检测变化

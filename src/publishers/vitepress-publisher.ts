@@ -1,7 +1,6 @@
 import { BasePublisher, PublishedNote } from './base-publisher';
 import { PluginSettings } from '../settings/settings.interface';
 import { GitHubService } from '../services/github.service';
-import { GitLabService } from '../services/gitlab.service';
 import ObsidianPublisher from '../main';
 
 // 在类定义之前声明接口
@@ -24,7 +23,6 @@ export interface DirectoryNode {
 export class VitePressPublisher extends BasePublisher {
     private settings: PluginSettings;
     private githubService: GitHubService;
-    private gitlabService: GitLabService;
     private plugin: ObsidianPublisher;
     private directoryCache: {
         data: DirectoryNode[];
@@ -36,30 +34,18 @@ export class VitePressPublisher extends BasePublisher {
     constructor(plugin: ObsidianPublisher, settings: PluginSettings) {
         super({
             outputPath: settings.vitepressPath,
-            siteName: settings.platform === 'github' ? settings.githubRepo : settings.gitlabProjectId
+            siteName: settings.githubRepo
         });
         this.plugin = plugin;
         this.settings = settings;
         
-        // 初始化 GitHub 服务
-        if (settings.platform === 'github') {
-            this.githubService = new GitHubService({
-                username: settings.githubUsername,
-                repo: settings.githubRepo,
-                token: settings.githubToken,
-                branch: settings.githubBranch
-            });
-        }
-        
-        // 初始化 GitLab 服务
-        if (settings.platform === 'gitlab') {
-            this.gitlabService = new GitLabService({
-                url: settings.gitlabUrl,
-                projectId: settings.gitlabProjectId,
-                token: settings.gitlabToken,
-                branch: settings.gitlabBranch
-            });
-        }
+        // 只初始化 GitHub 服务
+        this.githubService = new GitHubService({
+            username: settings.githubUsername,
+            repo: settings.githubRepo,
+            token: settings.githubToken,
+            branch: settings.githubBranch
+        });
     }
 
     /**
@@ -147,21 +133,11 @@ export class VitePressPublisher extends BasePublisher {
                 : content;
 
             // 根据平台选择使用不同的务
-            if (this.settings.platform === 'github' && this.githubService) {
-                await this.githubService.uploadFile(
-                    fullPath,
-                    processedContent,
-                    `Update ${targetPath} via Obsidian Publisher`
-                );
-            } else if (this.settings.platform === 'gitlab' && this.gitlabService) {
-                await this.gitlabService.uploadFile(
-                    fullPath,
-                    processedContent,
-                    `Update ${targetPath} via Obsidian Publisher`
-                );
-            } else {
-                throw new Error('未配置有效的发布平台');
-            }
+            await this.githubService.uploadFile(
+                fullPath,
+                processedContent,
+                `Update ${targetPath} via Obsidian Publisher`
+            );
 
             // 记录发布成功
             await this.recordPublishStatus(filePath, fullPath, true);
@@ -450,20 +426,16 @@ layout: doc
         }
     }
 
-    private getService(): GitHubService | GitLabService {
-        if (this.settings.platform === 'github' && this.githubService) {
-            return this.githubService;
-        } else if (this.settings.platform === 'gitlab' && this.gitlabService) {
-            return this.gitlabService;
+    private getService(): GitHubService {
+        if (!this.githubService) {
+            throw new Error('GitHub 服务未初始化');
         }
-        throw new Error('未配置有效的发布平台');
+        return this.githubService;
     }
 
     private getRemotePath(filePath: string): string {
         // 获取 VitePress 基础路径
-        const basePath = this.settings.platform === 'github' 
-            ? this.settings.vitepressPath 
-            : this.settings.gitlabPath;
+        const basePath = this.settings.vitepressPath;
 
         // 如果设置了保持文件结构
         if (this.settings.vitepress.keepFileStructure) {

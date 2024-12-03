@@ -14,16 +14,8 @@ export interface PluginSettings {
     githubBranch: string;
     vitepressPath: string;
     
-    // GitLab 相关设置（与 GitHub 保持一致的命名）
-    gitlabToken: string;
-    gitlabUsername: string;
-    gitlabRepo: string;
-    gitlabBranch: string;
-    gitlabPath: string;
-    gitlabEnabled: boolean;
-    platform: 'github' | 'gitlab';
-    gitlabUrl: string;
-    gitlabProjectId: string;
+    // 平台选择
+    platform: 'github';
 }
 
 export interface VitePressSettings {
@@ -49,16 +41,6 @@ export const DEFAULT_SETTINGS: PluginSettings = {
         keepFileStructure: true,
         defaultDirectory: ''
     },
-    
-    // GitLab 默认设置
-    gitlabToken: '',
-    gitlabUsername: '',
-    gitlabRepo: '',
-    gitlabBranch: 'main',
-    gitlabPath: 'docs',
-    gitlabEnabled: false,
-    gitlabUrl: '',
-    gitlabProjectId: '',
     
     // 平台选择
     platform: 'github'

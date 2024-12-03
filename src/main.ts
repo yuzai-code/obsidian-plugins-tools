@@ -92,17 +92,6 @@ export default class ObsidianPublisher extends Plugin {
 					});
 			});
 
-			menu.addItem((item) => {
-				item
-					.setTitle('GitLab')
-					.setIcon('gitlab')
-					.onClick(async () => {
-						this.settings.platform = 'gitlab';
-						await this.saveSettings();
-						this.showPublishMenu(evt);
-					});
-			});
-
 			menu.showAtMouseEvent(evt);
 		});
 
@@ -133,7 +122,7 @@ export default class ObsidianPublisher extends Plugin {
 						// 如果指定了平台，则临时切换平台
 						if (platform) {
 							const originalPlatform = this.settings.platform;
-							this.settings.platform = platform as 'github' | 'gitlab';
+							this.settings.platform = platform as 'github';
 							await publisher.publish(content, filePath);
 							this.settings.platform = originalPlatform;
 						} else {
@@ -164,7 +153,7 @@ export default class ObsidianPublisher extends Plugin {
 
 						// 临时切换平台
 						const originalPlatform = this.settings.platform;
-						this.settings.platform = platform as 'github' | 'gitlab';
+						this.settings.platform = platform as 'github';
 						
 						// 从远程获取内容
 						const content = await publisher.getRemoteContent(filePath);
@@ -192,7 +181,7 @@ export default class ObsidianPublisher extends Plugin {
 
 						// 临时切换平台
 						const originalPlatform = this.settings.platform;
-						this.settings.platform = platform as 'github' | 'gitlab';
+						this.settings.platform = platform as 'github';
 						
 						// 删除远程文件
 						await publisher.deleteRemote(filePath);
@@ -221,20 +210,16 @@ export default class ObsidianPublisher extends Plugin {
 	private showPublishMenu(evt: MouseEvent) {
 		const menu = new Menu();
 
-		// 检查当前平台是否启用
-		const isEnabled = this.settings.platform === 'github' 
-			? this.settings.githubEnabled 
-			: this.settings.gitlabEnabled;
-
-		if (!isEnabled) {
-			new Notice(`${this.settings.platform === 'github' ? 'GitHub' : 'GitLab'} 发布功能未启用`);
+		// 检查 GitHub 是否启用
+		if (!this.settings.githubEnabled) {
+			new Notice('GitHub 发布功能未启用');
 			return;
 		}
 
 		// 一键发布选项
 		menu.addItem((item) => {
 			item
-				.setTitle(`一键布到 ${this.settings.platform === 'github' ? 'GitHub' : 'GitLab'}`)
+				.setTitle('一键发布到 GitHub')
 				.setIcon('rocket')
 				.onClick(async () => {
 					const activeFile = this.app.workspace.getActiveFile();
@@ -250,7 +235,7 @@ export default class ObsidianPublisher extends Plugin {
 							throw new Error('VitePress 发布器未启用');
 						}
 						await publisher.quickPublish(content, activeFile.path);
-						new Notice(`成功发布到 ${this.settings.platform === 'github' ? 'GitHub' : 'GitLab'}！`);
+						new Notice('发布成功！');
 					} catch (error) {
 						new Notice(`发布失败: ${error instanceof Error ? error.message : '未知错误'}`);
 					}
@@ -260,7 +245,7 @@ export default class ObsidianPublisher extends Plugin {
 		// 选择目录发布选项
 		menu.addItem((item) => {
 			item
-				.setTitle(`选择目录发布到 ${this.settings.platform === 'github' ? 'GitHub' : 'GitLab'}`)
+				.setTitle('选择目录发布到 GitHub')
 				.setIcon('folder')
 				.onClick(async () => {
 					await this.publishWithDirectorySelection(evt);
@@ -413,10 +398,6 @@ export default class ObsidianPublisher extends Plugin {
 		if (this.settings.vitepress.enabled) {
 			if (this.settings.platform === 'github' && !this.settings.githubEnabled) {
 				new Notice('GitHub 发布功能未启用');
-				return;
-			}
-			if (this.settings.platform === 'gitlab' && !this.settings.gitlabEnabled) {
-				new Notice('GitLab 发布功能未启用');
 				return;
 			}
 			this.publishers.set('vitepress', new VitePressPublisher(this, this.settings));

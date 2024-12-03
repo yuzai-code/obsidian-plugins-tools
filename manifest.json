@@ -3,7 +3,7 @@
 	"name": "Publisher",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "将 Obsidian 笔记发布到个人博客",
+	"description": "将 Obsidian 笔记发布到 GitHub VitePress 站点",
 	"author": "Yuzai",
 	"isDesktopOnly": false,
 	"defaultSettings": {
