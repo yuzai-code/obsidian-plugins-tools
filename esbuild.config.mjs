@@ -47,7 +47,6 @@ await esbuild.build({
         '@codemirror/view',
         ...builtins],
     format: 'cjs',
-    watch: !prod,
     target: 'es2016',
     logLevel: "info",
     sourcemap: prod ? false : 'inline',
@@ -56,11 +55,67 @@ await esbuild.build({
     outfile: 'main.js',
 }).catch(() => process.exit(1));
 
-await esbuild.build({
-    entryPoints: ["./src/main.css"],
-    outfile: "styles.css",
-    watch: !prod,
-    bundle: true,
-    allowOverwrite: true,
-    minify: false,
-});
+if (!prod) {
+    await esbuild.context({
+        banner: {
+            js: banner,
+        },
+        plugins: [
+            Vue({ isProd: true })
+        ],
+        entryPoints: ['./src/main.ts'],
+        bundle: true,
+        external: [
+            'obsidian',
+            'electron',
+            '@codemirror/autocomplete',
+            '@codemirror/closebrackets',
+            '@codemirror/collab',
+            '@codemirror/commands',
+            '@codemirror/comment',
+            '@codemirror/fold',
+            '@codemirror/gutter',
+            '@codemirror/highlight',
+            '@codemirror/history',
+            '@codemirror/language',
+            '@codemirror/lint',
+            '@codemirror/matchbrackets',
+            '@codemirror/panel',
+            '@codemirror/rangeset',
+            '@codemirror/rectangular-selection',
+            '@codemirror/search',
+            '@codemirror/state',
+            '@codemirror/stream-parser',
+            '@codemirror/text',
+            '@codemirror/tooltip',
+            '@codemirror/view',
+            ...builtins],
+        format: 'cjs',
+        target: 'es2016',
+        logLevel: "info",
+        sourcemap: 'inline',
+        outfile: 'main.js',
+    }).then(ctx => {
+        ctx.watch();
+    });
+}
+
+// CSS 构建
+if (!prod) {
+    const cssContext = await esbuild.context({
+        entryPoints: ["./src/main.css"],
+        outfile: "styles.css",
+        bundle: true,
+        allowOverwrite: true,
+        minify: false,
+    });
+    await cssContext.watch();
+} else {
+    await esbuild.build({
+        entryPoints: ["./src/main.css"],
+        outfile: "styles.css",
+        bundle: true,
+        allowOverwrite: true,
+        minify: false,
+    });
+}
