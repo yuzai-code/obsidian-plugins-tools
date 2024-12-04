@@ -44,7 +44,9 @@
     <div class="notes-list">
       <template v-if="filteredNotes.length">
         <div v-for="note in paginatedNotes" :key="note.filePath" class="note-item">
-          <div class="note-title-bar" @click="toggleNoteDetails(note.filePath)" :class="{ collapsed: !isNoteExpanded(note.filePath) }">
+          <div class="note-title-bar" 
+               @click="toggleNoteDetails(note.filePath)"
+               :class="{ collapsed: !isNoteExpanded(note.filePath) }">
             <input
               type="checkbox"
               class="note-checkbox"
@@ -52,7 +54,6 @@
               :value="note.filePath"
               @click.stop
             />
-            <div class="toggle-icon" ref="toggleIcon"></div>
             <span class="note-title">{{ getFileName(note.filePath) }}</span>
             <div class="platform-badges">
               <span
@@ -145,7 +146,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch, onMounted, nextTick } from 'vue';
 import type { PublishRecord } from '../models/publish-record.interface';
 import type { TFile } from 'obsidian';
 import { setIcon } from 'obsidian';
@@ -170,13 +171,32 @@ const searchQuery = ref('');
 const currentPage = ref(1);
 const pageSize = 10;
 
-// 设置折叠图标
-const toggleIcon = ref<HTMLElement[]>([]);
+// 存储所有折叠图标的引用
+const toggleIcons = ref<(HTMLElement | null)[]>([]);
+
+// 设置图标引用的方法
+const setToggleIconRef = (el: HTMLElement, index: number) => {
+  toggleIcons.value[index] = el;
+  // 修改图标方向：展开时用 chevron-down，折叠时用 chevron-right
+  const isExpanded = isNoteExpanded(paginatedNotes.value[index].filePath);
+  setIcon(el, isExpanded ? 'chevron-down' : 'chevron-right');
+};
+
+// 更新所有图标
+const updateAllIcons = () => {
+  nextTick(() => {
+    toggleIcons.value.forEach((el, index) => {
+      if (el && paginatedNotes.value[index]) {
+        setIcon(el, isNoteExpanded(paginatedNotes.value[index].filePath) ? 'chevron-down' : 'chevron-right');
+      }
+    });
+  });
+};
 
 onMounted(() => {
   // 在下一个 tick 设置图标，确保 DOM 已更新
   setTimeout(() => {
-    toggleIcon.value.forEach(el => {
+    toggleIcons.value.forEach(el => {
       setIcon(el, 'chevron-right');
     });
   }, 0);
@@ -280,13 +300,7 @@ const toggleNoteDetails = (filePath: string) => {
   } else {
     expandedNotes.value.add(filePath);
   }
-  // 更新图标
-  setTimeout(() => {
-    toggleIcon.value.forEach((el, index) => {
-      const isExpanded = expandedNotes.value.has(paginatedNotes.value[index].filePath);
-      setIcon(el, isExpanded ? 'chevron-down' : 'chevron-right');
-    });
-  }, 0);
+  updateAllIcons();
 };
 
 // 检查笔记是否处于展开状态
@@ -318,6 +332,18 @@ const handleBatchPublish = async () => {
   // 发布完成后清空选中状态
   selectedNotes.value.clear();
 };
+
+// 监听分页、标签切换和搜索变化，更新图标
+watch([currentPage, currentTab, searchQuery], () => {
+  toggleIcons.value = [];
+  nextTick(updateAllIcons);
+});
+
+// 监听笔记数据变化，更新图标
+watch(() => paginatedNotes.value, () => {
+  toggleIcons.value = [];
+  nextTick(updateAllIcons);
+}, { deep: true });
 </script>
 
 <style>
@@ -456,6 +482,7 @@ const handleBatchPublish = async () => {
   border-radius: 8px;
   overflow: hidden;
   transition: all 0.2s ease;
+  margin-bottom: 8px;
 }
 
 .note-item:hover {
@@ -465,7 +492,7 @@ const handleBatchPublish = async () => {
 .note-title-bar {
   display: flex;
   align-items: center;
-  padding: 14px 16px;
+  padding: 10px 12px;
   background: var(--background-secondary);
   cursor: pointer;
   user-select: none;
@@ -477,23 +504,8 @@ const handleBatchPublish = async () => {
 }
 
 .note-checkbox {
-  margin-right: 12px;
+  margin-right: 8px;
   cursor: pointer;
-}
-
-.toggle-icon {
-  margin-right: 12px;
-  color: var(--text-muted);
-  width: 16px;
-  height: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.2s ease;
-}
-
-.note-title-bar:not(.collapsed) .toggle-icon svg {
-  transform: rotate(90deg);
 }
 
 .note-title {
@@ -507,7 +519,7 @@ const handleBatchPublish = async () => {
 .platform-badge {
   display: inline-flex;
   align-items: center;
-  padding: 4px 10px;
+  padding: 3px 8px;
   border-radius: 4px;
   font-size: 0.85em;
   font-weight: 500;
@@ -520,7 +532,7 @@ const handleBatchPublish = async () => {
 
 /* 笔记详情 */
 .note-details {
-  padding: 16px;
+  padding: 12px;
   background: var(--background-primary);
   border-top: 1px solid var(--background-modifier-border);
   display: none;
@@ -543,9 +555,9 @@ const handleBatchPublish = async () => {
 }
 
 .platform-info {
-  padding: 16px;
+  padding: 12px;
   background: var(--background-secondary);
-  border-radius: 8px;
+  border-radius: 6px;
 }
 
 .platform-header {

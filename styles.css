@@ -114,6 +114,7 @@
   border-radius: 8px;
   overflow: hidden;
   transition: all 0.2s ease;
+  margin-bottom: 8px;
 }
 .note-item:hover {
   border-color: var(--interactive-accent);
@@ -121,7 +122,7 @@
 .note-title-bar {
   display: flex;
   align-items: center;
-  padding: 14px 16px;
+  padding: 10px 12px;
   background: var(--background-secondary);
   cursor: pointer;
   user-select: none;
@@ -131,21 +132,8 @@
   background: var(--background-modifier-hover);
 }
 .note-checkbox {
-  margin-right: 12px;
+  margin-right: 8px;
   cursor: pointer;
-}
-.toggle-icon {
-  margin-right: 12px;
-  color: var(--text-muted);
-  width: 16px;
-  height: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.2s ease;
-}
-.note-title-bar:not(.collapsed) .toggle-icon svg {
-  transform: rotate(90deg);
 }
 .note-title {
   flex: 1;
@@ -156,7 +144,7 @@
 .platform-badge {
   display: inline-flex;
   align-items: center;
-  padding: 4px 10px;
+  padding: 3px 8px;
   border-radius: 4px;
   font-size: 0.85em;
   font-weight: 500;
@@ -166,7 +154,7 @@
   color: #2da44e;
 }
 .note-details {
-  padding: 16px;
+  padding: 12px;
   background: var(--background-primary);
   border-top: 1px solid var(--background-modifier-border);
   display: none;
@@ -186,9 +174,9 @@
   }
 }
 .platform-info {
-  padding: 16px;
+  padding: 12px;
   background: var(--background-secondary);
-  border-radius: 8px;
+  border-radius: 6px;
 }
 .platform-header {
   display: flex;
