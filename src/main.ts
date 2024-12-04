@@ -34,6 +34,57 @@ export default class ObsidianPublisher extends Plugin {
 		// 初始化发布器
 		this.initializePublishers();
 
+		// 添加发布命令
+		this.addCommand({
+			id: 'publish-note',
+			name: '发布当前笔记',
+			callback: () => this.publishCurrentNote()
+		});
+
+		// 添加一键发布命令
+		this.addCommand({
+			id: 'quick-publish',
+			name: '一键发布到 VitePress',
+			callback: async () => {
+				const activeFile = this.app.workspace.getActiveFile();
+				if (!activeFile) {
+					new Notice('没有打开的文件');
+					return;
+				}
+
+				try {
+					const content = await this.app.vault.read(activeFile);
+					const publisher = this.publishers.get('vitepress');
+					if (!publisher) {
+						throw new Error('VitePress 发布器未启用');
+					}
+					await publisher.publish(content, activeFile.path);
+					new Notice('发布成功！');
+				} catch (error) {
+					new Notice(`发布失败: ${error instanceof Error ? error.message : '未知错误'}`);
+				}
+			}
+		});
+
+		// 添加功能按钮到编辑器菜单
+		this.addRibbonIcon('paper-plane', '发布笔记', (evt: MouseEvent) => {
+			const menu = new Menu();
+
+			// 添加平台选择子菜单
+			menu.addItem((item) => {
+				item
+					.setTitle('GitHub')
+					.setIcon('github')
+					.onClick(async () => {
+						this.settings.platform = 'github';
+						await this.saveSettings();
+						this.showPublishMenu(evt);
+					});
+			});
+
+			menu.showAtMouseEvent(evt);
+		});
+
 		// 添加仪表盘按钮
 		this.addRibbonIcon('gauge', '发布仪表盘', () => {
 			this.openDashboard();
@@ -134,13 +185,6 @@ export default class ObsidianPublisher extends Plugin {
 
 		// 添加设置标签页
 		this.addSettingTab(new SettingsTab(this.app, this));
-
-		// 添加命令
-		this.addCommand({
-			id: 'open-dashboard',
-			name: '打开发布仪表盘',
-			callback: () => this.openDashboard()
-		});
 	}
 
 	/**
@@ -232,7 +276,7 @@ export default class ObsidianPublisher extends Plugin {
 					menuItem.onClick(async (evt: MouseEvent) => {
 						if (item.type === 'file') {
 							// 如果选择的是文件，显示提示
-							new Notice('请选择目录进行发布，不能选择文件');
+							new Notice('请选择目录进行发布，不能选择���件');
 							return;
 						}
 
@@ -264,7 +308,7 @@ export default class ObsidianPublisher extends Plugin {
 									subMenu.showAtPosition({ x: rect.right, y: rect.top });
 								}
 							} else {
-								// 击目录名称时执行发布
+								// 击目���名称时执行发布
 								await this.publishToSelectedDirectory(activeFile, item.path);
 							}
 						} else if (item.type === 'dir') {
@@ -358,13 +402,14 @@ export default class ObsidianPublisher extends Plugin {
 		workspace.revealLeaf(leaf);
 	}
 
-	public async recordPublish(filePath: string, remotePath: string, platform: 'github' , status: 'success' | 'failed' = 'success') {
+	public async recordPublish(filePath: string, remotePath: string, platform: 'github', status: 'success' | 'failed', sha?: string) {
 		this.publishHistory.addRecord({
 			filePath,
 			remotePath,
 			platform,
 			lastPublished: Date.now(),
-			status
+			status,
+			sha
 		});
 		
 		if (this.dashboardView) {

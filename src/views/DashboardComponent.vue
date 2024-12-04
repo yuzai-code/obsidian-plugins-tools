@@ -80,7 +80,7 @@
                       class="action-button"
                       @click="handleRepublish(note.filePath, note.platform)"
                     >
-                      重新发布
+                      {{ note.status === 'success' ? '重新发布' : '发布' }}
                     </button>
                     <button
                       v-if="note.status === 'success'"
@@ -153,6 +153,7 @@ import { setIcon } from 'obsidian';
 
 interface NoteRecord extends Omit<PublishRecord, 'status'> {
   status: 'success' | 'failed' | 'unpublished';
+  sha?: string;
 }
 
 // Props 定义
@@ -174,6 +175,14 @@ const pageSize = 10;
 // 存储所有折叠图标的引用
 const toggleIcons = ref<(HTMLElement | null)[]>([]);
 
+// 创建内部数据源
+const internalNotes = ref(props.notes);
+
+// 监听 props 变化
+watch(() => props.notes, (newNotes) => {
+  internalNotes.value = newNotes;
+});
+
 // 设置图标引用的方法
 const setToggleIconRef = (el: HTMLElement, index: number) => {
   toggleIcons.value[index] = el;
@@ -193,6 +202,14 @@ const updateAllIcons = () => {
   });
 };
 
+// 暴露更新方法
+defineExpose({
+  updateNotes(newNotes: PublishRecord[]) {
+    internalNotes.value = newNotes;
+  }
+});
+
+// 移除 onMounted 中的实例保存代码
 onMounted(() => {
   // 在下一个 tick 设置图标，确保 DOM 已更新
   setTimeout(() => {
@@ -219,15 +236,15 @@ const getEmptyStateMessage = () => {
 
 // 根据当前标签页和搜索条件过滤笔记列表
 const filteredNotes = computed(() => {
-  const allNotes = props.notes;
-  let notes: NoteRecord[] = [];
+  const allNotes = internalNotes.value;
+  let filteredResults: NoteRecord[] = [];
 
   if (currentTab.value === 'published') {
-    notes = allNotes.filter(note => note.status === 'success') as NoteRecord[];
+    filteredResults = allNotes.filter(note => note.status === 'success') as NoteRecord[];
   } else {
     const app = (window as any).app;
     const allFiles = app.vault.getMarkdownFiles() as TFile[];
-    notes = allFiles.map(file => {
+    filteredResults = allFiles.map(file => {
       const publishedNote = allNotes.find(note => note.filePath === file.path);
       return {
         filePath: file.path,
@@ -241,13 +258,13 @@ const filteredNotes = computed(() => {
 
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase();
-    notes = notes.filter(note => 
+    filteredResults = filteredResults.filter(note => 
       note.filePath.toLowerCase().includes(query) ||
       note.remotePath.toLowerCase().includes(query)
     );
   }
 
-  return notes;
+  return filteredResults;
 });
 
 // 计算总页数
@@ -308,9 +325,32 @@ const isNoteExpanded = (filePath: string) => {
   return expandedNotes.value.has(filePath);
 };
 
-// 处理单个笔记重新发布
-const handleRepublish = async (filePath: string, platform?: string) => {
+// 处理单个笔记发布
+const handleRepublish = async (filePath: string, platform?: 'github') => {
   await props.onRepublish(filePath, platform);
+  // 更新笔记状态
+  const updatedNotes = [...internalNotes.value];
+  const noteIndex = updatedNotes.findIndex(note => note.filePath === filePath);
+  
+  if (noteIndex >= 0) {
+    // 更新已存在笔记的状态
+    updatedNotes[noteIndex] = {
+      ...updatedNotes[noteIndex],
+      status: 'success',
+      lastPublished: Date.now()
+    };
+  } else {
+    // 添加新发布的笔记
+    updatedNotes.push({
+      filePath,
+      platform: 'github',
+      status: 'success',
+      lastPublished: Date.now(),
+      remotePath: filePath
+    });
+  }
+  
+  internalNotes.value = updatedNotes;
 };
 
 // 处理从远程更新笔记
@@ -321,15 +361,17 @@ const handleUpdateFromRemote = async (filePath: string, platform: string) => {
 // 处理从远程删除笔记
 const handleDeleteFromRemote = async (filePath: string, platform: string) => {
   await props.onDeleteFromRemote(filePath, platform);
+  // 从内部数据源中移除已删除的笔记
+  internalNotes.value = internalNotes.value.filter(note => 
+    !(note.filePath === filePath && note.platform === platform)
+  );
 };
 
-// 处理批量发布中的笔记
+// 处理批量发布
 const handleBatchPublish = async () => {
-  // 遍历所有选中的笔记进行发布
   for (const filePath of selectedNotes.value) {
-    await props.onRepublish(filePath);
+    await handleRepublish(filePath);
   }
-  // 发布完成后清空选中状态
   selectedNotes.value.clear();
 };
 

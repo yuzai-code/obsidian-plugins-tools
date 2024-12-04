@@ -3,6 +3,12 @@ import { PluginSettings } from '../settings/settings.interface';
 import { GitHubService } from '../services/github.service';
 import ObsidianPublisher from '../main';
 
+// 在文件顶部添加类型定义
+interface GitHubResponse {
+    sha: string;
+    content?: string;
+}
+
 // 在类定义之前声明接口
 export interface DirectoryNode {
     path: string;
@@ -86,12 +92,13 @@ export class VitePressPublisher extends BasePublisher {
     /**
      * 记录发布状态
      */
-    private async recordPublishStatus(filePath: string, remotePath: string, success: boolean) {
+    private async recordPublishStatus(filePath: string, remotePath: string, success: boolean, sha?: string) {
         await this.plugin.recordPublish(
             filePath,
             remotePath,
             this.settings.platform,
-            success ? 'success' : 'failed'
+            success ? 'success' : 'failed',
+            sha
         );
     }
 
@@ -132,15 +139,15 @@ export class VitePressPublisher extends BasePublisher {
                 ? this.addVitepressFrontmatter(content)
                 : content;
 
-            // 根据平台选择使用不同的务
-            await this.githubService.uploadFile(
+            // 上传文件并获取 SHA
+            const result = await this.githubService.uploadFile(
                 fullPath,
                 processedContent,
                 `Update ${targetPath} via Obsidian Publisher`
-            );
+            ) as GitHubResponse;
 
-            // 记录发布成功
-            await this.recordPublishStatus(filePath, fullPath, true);
+            // 记录发布成功，包含 SHA
+            await this.recordPublishStatus(filePath, fullPath, true, result.sha);
             
         } catch (error) {
             // 记录发布失败
