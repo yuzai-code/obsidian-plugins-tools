@@ -419,7 +419,7 @@ export default class ObsidianPublisher extends Plugin {
 		workspace.revealLeaf(leaf);
 	}
 
-	public async recordPublish(filePath: string, remotePath: string, platform: 'github' | 'gitlab', status: 'success' | 'failed' = 'success') {
+	public async recordPublish(filePath: string, remotePath: string, platform: 'github' , status: 'success' | 'failed' = 'success') {
 		this.publishHistory.addRecord({
 			filePath,
 			remotePath,

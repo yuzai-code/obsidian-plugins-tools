@@ -259,6 +259,7 @@ layout: doc
                     const newNode: DirectoryNode = {
                         path: currentPath,
                         name: part,
+                        type: 'dir',
                         children: [],
                         level: level,
                         loaded: false,

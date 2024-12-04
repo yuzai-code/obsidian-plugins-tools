@@ -556,7 +556,6 @@ export class DashboardView extends ItemView {
 
             const enabledPlatforms: string[] = [];
             if (this.settings.githubEnabled) enabledPlatforms.push('github');
-            if (this.settings.gitlabEnabled) enabledPlatforms.push('gitlab');
 
             if (enabledPlatforms.length === 0) {
                 new Notice('请先启用至少一个发布平台');
@@ -641,13 +640,6 @@ export class DashboardView extends ItemView {
                 });
             }
             
-            if (this.settings.gitlabEnabled) {
-                platformsList.createEl('span', {
-                    cls: 'platform-badge gitlab',
-                    text: 'GitLab'
-                });
-            }
-
             // 复选框事件
             checkbox.addEventListener('click', (e: MouseEvent) => {
                 e.stopPropagation();
