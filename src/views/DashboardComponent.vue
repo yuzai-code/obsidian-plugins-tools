@@ -2,7 +2,7 @@
   <div class="dashboard-container">
     <!-- 仪表盘头部 -->
     <div class="dashboard-header">
-      <h2>发布仪表盘</h2>
+      <!-- <h2>发布仪表盘</h2> -->
       <!-- 搜索框 -->
       <div class="search-box">
         <input 
@@ -40,11 +40,11 @@
       </div>
     </div>
 
-    <!-- 笔记列表 -->
+    <!-- 笔列表 -->
     <div class="notes-list">
       <template v-if="filteredNotes.length">
         <div v-for="note in paginatedNotes" :key="note.filePath" class="note-item">
-          <div class="note-title-bar" @click="toggleNoteDetails(note.filePath)">
+          <div class="note-title-bar" @click="toggleNoteDetails(note.filePath)" :class="{ collapsed: !isNoteExpanded(note.filePath) }">
             <input
               type="checkbox"
               class="note-checkbox"
@@ -52,9 +52,7 @@
               :value="note.filePath"
               @click.stop
             />
-            <span class="toggle-icon">
-              {{ isNoteExpanded(note.filePath) ? '▼' : '▶' }}
-            </span>
+            <div class="toggle-icon" ref="toggleIcon"></div>
             <span class="note-title">{{ getFileName(note.filePath) }}</span>
             <div class="platform-badges">
               <span
@@ -147,9 +145,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import type { PublishRecord } from '../models/publish-record.interface';
 import type { TFile } from 'obsidian';
+import { setIcon } from 'obsidian';
 
 interface NoteRecord extends Omit<PublishRecord, 'status'> {
   status: 'success' | 'failed' | 'unpublished';
@@ -170,6 +169,18 @@ const expandedNotes = ref<Set<string>>(new Set());
 const searchQuery = ref('');
 const currentPage = ref(1);
 const pageSize = 10;
+
+// 设置折叠图标
+const toggleIcon = ref<HTMLElement[]>([]);
+
+onMounted(() => {
+  // 在下一个 tick 设置图标，确保 DOM 已更新
+  setTimeout(() => {
+    toggleIcon.value.forEach(el => {
+      setIcon(el, 'chevron-right');
+    });
+  }, 0);
+});
 
 // 切换标签页
 const switchTab = (tab: 'published' | 'all') => {
@@ -269,6 +280,13 @@ const toggleNoteDetails = (filePath: string) => {
   } else {
     expandedNotes.value.add(filePath);
   }
+  // 更新图标
+  setTimeout(() => {
+    toggleIcon.value.forEach((el, index) => {
+      const isExpanded = expandedNotes.value.has(paginatedNotes.value[index].filePath);
+      setIcon(el, isExpanded ? 'chevron-down' : 'chevron-right');
+    });
+  }, 0);
 };
 
 // 检查笔记是否处于展开状态
@@ -291,7 +309,7 @@ const handleDeleteFromRemote = async (filePath: string, platform: string) => {
   await props.onDeleteFromRemote(filePath, platform);
 };
 
-// 处理批量发布选中的笔记
+// 处理批量发布中的笔记
 const handleBatchPublish = async () => {
   // 遍历所有选中的笔记进行发布
   for (const filePath of selectedNotes.value) {
@@ -303,78 +321,121 @@ const handleBatchPublish = async () => {
 </script>
 
 <style>
-/* 覆盖 Obsidian 的默认布局样式 */
-:root .workspace-leaf-content[data-type="publish-dashboard"] {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-:root .workspace-leaf-content[data-type="publish-dashboard"] .view-content {
-  height: 100%;
-  padding: 0;
-  overflow: hidden;
-}
-
+/* 整体容器 */
 .dashboard-container {
   height: 100%;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   background-color: var(--background-primary);
+  padding: 0 20px;
 }
 
+/* 头部样式 */
 .dashboard-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--background-modifier-border);
-  margin-bottom: 16px;
+  padding: 20px 0;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.dashboard-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: -20px;
+  right: -20px;
+  height: 1px;
+  background: var(--background-modifier-border);
 }
 
 .dashboard-header h2 {
   margin: 0;
-  font-size: 1.5em;
+  font-size: 1.6em;
   color: var(--text-normal);
+  font-weight: 500;
+  letter-spacing: -0.5px;
+  margin-bottom: 16px;
 }
 
+/* 搜索框 */
+.search-box {
+  position: relative;
+  margin-bottom: 8px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 10px 16px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  background-color: var(--background-primary);
+  color: var(--text-normal);
+  font-size: 0.95em;
+  transition: all 0.2s ease;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--interactive-accent);
+  box-shadow: 0 0 0 2px var(--interactive-accent-hover);
+}
+
+/* 批量操作区域 */
 .batch-publish-section {
-  padding: 16px;
-  margin: 0 16px 16px;
-  background: var(--background-secondary);
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  background: var(--background-modifier-hover);
   border-radius: 8px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  font-size: 0.95em;
 }
 
 .batch-publish-button {
   background: var(--interactive-accent);
   color: var(--text-on-accent);
   padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
+  border-radius: 6px;
   border: none;
+  cursor: pointer;
+  font-size: 0.9em;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
 }
 
+.batch-publish-button:hover {
+  background: var(--interactive-accent-hover);
+}
+
+/* 标签页 */
 .tab-group {
   display: flex;
-  gap: 1px;
-  padding: 8px 16px;
+  gap: 2px;
+  padding: 0;
+  margin-bottom: 20px;
+  border-radius: 8px;
   background: var(--background-secondary);
-  margin-bottom: 16px;
 }
 
 .tab-item {
-  padding: 8px 16px;
+  flex: 1;
+  padding: 10px 20px;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 6px;
   color: var(--text-muted);
   user-select: none;
-  flex: 1;
   text-align: center;
+  font-size: 0.95em;
+  font-weight: 500;
+  transition: all 0.2s ease;
 }
 
 .tab-item:hover {
   background: var(--background-modifier-hover);
+  color: var(--text-normal);
 }
 
 .tab-item.active {
@@ -382,87 +443,121 @@ const handleBatchPublish = async () => {
   color: var(--text-on-accent);
 }
 
+/* 笔记列表 */
 .notes-list {
-  padding: 0 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .note-item {
-  margin-bottom: 16px;
   border: 1px solid var(--background-modifier-border);
   border-radius: 8px;
   overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.note-item:hover {
+  border-color: var(--interactive-accent);
 }
 
 .note-title-bar {
   display: flex;
   align-items: center;
-  padding: 12px 16px;
+  padding: 14px 16px;
   background: var(--background-secondary);
   cursor: pointer;
   user-select: none;
+  transition: background-color 0.2s ease;
 }
 
 .note-title-bar:hover {
   background: var(--background-modifier-hover);
 }
 
+.note-checkbox {
+  margin-right: 12px;
+  cursor: pointer;
+}
+
 .toggle-icon {
-  margin-right: 8px;
+  margin-right: 12px;
   color: var(--text-muted);
-  font-size: 0.8em;
   width: 16px;
-  text-align: center;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.note-title-bar:not(.collapsed) .toggle-icon svg {
+  transform: rotate(90deg);
 }
 
 .note-title {
   flex: 1;
   font-weight: 500;
   color: var(--text-normal);
+  font-size: 0.95em;
 }
 
-.platform-badges {
-  display: flex;
-  gap: 4px;
-}
-
+/* 平台标签 */
 .platform-badge {
-  display: inline-block;
-  padding: 2px 8px;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
   border-radius: 4px;
-  font-size: 0.8em;
+  font-size: 0.85em;
+  font-weight: 500;
 }
 
 .platform-badge.github {
-  background: #2da44e33;
+  background: rgba(45, 164, 78, 0.1);
   color: #2da44e;
 }
 
+/* 笔记详情 */
 .note-details {
   padding: 16px;
   background: var(--background-primary);
   border-top: 1px solid var(--background-modifier-border);
-}
-
-.note-details.hidden {
   display: none;
 }
 
+.note-details:not(.hidden) {
+  display: block;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .platform-info {
-  padding: 12px;
+  padding: 16px;
   background: var(--background-secondary);
-  border-radius: 6px;
+  border-radius: 8px;
 }
 
 .platform-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .platform-name {
   font-weight: 600;
-  color: var(--text-normal);
+  font-size: 1em;
 }
 
 .platform-name.github {
@@ -471,30 +566,72 @@ const handleBatchPublish = async () => {
 
 .platform-actions {
   display: flex;
-  gap: 4px;
+  gap: 8px;
 }
 
 .action-button {
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 6px 12px;
+  border-radius: 6px;
   background: var(--interactive-accent);
   color: var(--text-on-accent);
   border: none;
   cursor: pointer;
-  font-size: 0.9em;
+  font-size: 0.85em;
+  font-weight: 500;
+  transition: all 0.2s ease;
 }
 
 .action-button:hover {
   background: var(--interactive-accent-hover);
+  transform: translateY(-1px);
 }
 
 .publish-time,
-.remote-path {
+.remote-path,
+.status {
   font-size: 0.9em;
   color: var(--text-muted);
-  margin-top: 4px;
+  margin-top: 8px;
 }
 
+/* 分页控件 */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px 0;
+  gap: 16px;
+  margin-top: 16px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.page-button {
+  padding: 6px 16px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  background: var(--background-primary);
+  color: var(--text-normal);
+  cursor: pointer;
+  font-size: 0.9em;
+  transition: all 0.2s ease;
+}
+
+.page-button:not(:disabled):hover {
+  background: var(--background-modifier-hover);
+  border-color: var(--interactive-accent);
+}
+
+.page-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-info {
+  color: var(--text-muted);
+  font-size: 0.9em;
+}
+
+/* 空状态 */
 .empty-state {
   text-align: center;
   padding: 40px 20px;
@@ -506,76 +643,37 @@ const handleBatchPublish = async () => {
   gap: 16px;
 }
 
-.empty-state-tip {
-  font-size: 0.9em;
-  opacity: 0.8;
-}
-
-/* 搜索框样式 */
-.search-box {
-  margin-top: 8px;
-}
-
-.search-input {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 4px;
-  background-color: var(--background-primary);
-  color: var(--text-normal);
-}
-
-.search-input:focus {
-  outline: none;
-  border-color: var(--interactive-accent);
-}
-
-/* 分页控件样式 */
-.pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 16px;
-  gap: 16px;
-  margin-top: 16px;
-  border-top: 1px solid var(--background-modifier-border);
-}
-
-.page-button {
-  padding: 4px 12px;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 4px;
-  background-color: var(--background-primary);
-  color: var(--text-normal);
-  cursor: pointer;
-}
-
-.page-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.page-button:not(:disabled):hover {
-  background-color: var(--background-modifier-hover);
-}
-
-.page-info {
-  color: var(--text-muted);
-}
-
 .switch-tab-button {
   margin-top: 16px;
-  padding: 8px 16px;
+  padding: 8px 20px;
   background: var(--interactive-accent);
   color: var(--text-on-accent);
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
+  font-size: 0.9em;
+  font-weight: 500;
+  transition: all 0.2s ease;
 }
 
-.status {
-  font-size: 0.9em;
-  color: var(--text-muted);
-  margin-top: 4px;
+.switch-tab-button:hover {
+  background: var(--interactive-accent-hover);
+  transform: translateY(-1px);
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.note-item {
+  animation: fadeIn 0.3s ease;
 }
 </style> 

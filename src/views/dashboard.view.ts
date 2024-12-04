@@ -33,6 +33,10 @@ export class DashboardView extends ItemView {
         return '发布仪表盘';
     }
 
+    getIcon(): string {
+        return 'gauge';
+    }
+
     async onOpen() {
         // 获取 view-content 容器
         const contentEl = this.containerEl.querySelector('.view-content') as HTMLElement;

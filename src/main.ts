@@ -34,69 +34,10 @@ export default class ObsidianPublisher extends Plugin {
 		// 初始化发布器
 		this.initializePublishers();
 
-		// 添加发布命令
-		this.addCommand({
-			id: 'publish-note',
-			name: '发布当前笔记',
-			callback: () => this.publishCurrentNote()
-		});
-
-		// 添加仪表盘命令
-		this.addCommand({
-			id: 'open-dashboard',
-			name: '打开发布仪表盘',
-			callback: () => this.openDashboard()
-		});
-
-		// 添加一键发布命令
-		this.addCommand({
-			id: 'quick-publish',
-			name: '一键发布到 VitePress',
-			callback: async () => {
-				const activeFile = this.app.workspace.getActiveFile();
-				if (!activeFile) {
-					new Notice('没有打开的文件');
-					return;
-				}
-
-				try {
-					const content = await this.app.vault.read(activeFile);
-					const publisher = this.publishers.get('vitepress');
-					if (!publisher) {
-						throw new Error('VitePress 发布器未启用');
-					}
-					await publisher.quickPublish(content, activeFile.path);
-					new Notice('发布成功！');
-				} catch (error) {
-					new Notice(`发布失败: ${error instanceof Error ? error.message : '未知错误'}`);
-				}
-			}
-		});
-
-		// 添加设置标签页
-		this.addSettingTab(new SettingsTab(this.app, this));
-
-		// 添加功能钮到编辑器菜单
-		this.addRibbonIcon('paper-plane', '发布笔记', (evt: MouseEvent) => {
-			const menu = new Menu();
-
-			// 添加平台选择子菜单
-			menu.addItem((item) => {
-				item
-					.setTitle('GitHub')
-					.setIcon('github')
-					.onClick(async () => {
-						this.settings.platform = 'github';
-						await this.saveSettings();
-						this.showPublishMenu(evt);
-					});
-			});
-
-			menu.showAtMouseEvent(evt);
-		});
-
 		// 添加仪表盘按钮
-		this.addRibbonIcon('gauge', '发布仪表盘', () => this.openDashboard());
+		this.addRibbonIcon('gauge', '发布仪表盘', () => {
+			this.openDashboard();
+		});
 
 		// 注册视图
 		this.registerView(
@@ -119,7 +60,6 @@ export default class ObsidianPublisher extends Plugin {
 							throw new Error('VitePress 发布器未启用');
 						}
 
-						// 如果指定了平台，则临时切换平台
 						if (platform) {
 							const originalPlatform = this.settings.platform;
 							this.settings.platform = platform as 'github';
@@ -130,7 +70,6 @@ export default class ObsidianPublisher extends Plugin {
 						}
 						
 						new Notice('发布成功！');
-						// 刷新仪表盘视图
 						this.dashboardView.refresh();
 					} catch (error) {
 						new Notice(`发布失败: ${error instanceof Error ? error.message : '未知错误'}`);
@@ -151,17 +90,12 @@ export default class ObsidianPublisher extends Plugin {
 							throw new Error('VitePress 发布器未启用');
 						}
 
-						// 临时切换平台
 						const originalPlatform = this.settings.platform;
 						this.settings.platform = platform as 'github';
 						
-						// 从远程获取内容
 						const content = await publisher.getRemoteContent(filePath);
-						
-						// 更新本地文件
 						await this.app.vault.modify(file, content);
 						
-						// 恢复原平台设置
 						this.settings.platform = originalPlatform;
 						
 						new Notice('从远程更新成功！');
@@ -179,17 +113,12 @@ export default class ObsidianPublisher extends Plugin {
 							throw new Error('VitePress 发布器未启用');
 						}
 
-						// 临时切换平台
 						const originalPlatform = this.settings.platform;
 						this.settings.platform = platform as 'github';
 						
-						// 删除远程文件
 						await publisher.deleteRemote(filePath);
-						
-						// 恢复原平台设置
 						this.settings.platform = originalPlatform;
 						
-						// 更新发布历史
 						this.publishHistory.removeRecord(filePath, platform);
 						
 						new Notice('从远程删除成功！');
@@ -202,6 +131,16 @@ export default class ObsidianPublisher extends Plugin {
 				return this.dashboardView;
 			}
 		);
+
+		// 添加设置标签页
+		this.addSettingTab(new SettingsTab(this.app, this));
+
+		// 添加命令
+		this.addCommand({
+			id: 'open-dashboard',
+			name: '打开发布仪表盘',
+			callback: () => this.openDashboard()
+		});
 	}
 
 	/**
@@ -325,7 +264,7 @@ export default class ObsidianPublisher extends Plugin {
 									subMenu.showAtPosition({ x: rect.right, y: rect.top });
 								}
 							} else {
-								// 点击目录名称时执行发布
+								// 击目录名称时执行发布
 								await this.publishToSelectedDirectory(activeFile, item.path);
 							}
 						} else if (item.type === 'dir') {
