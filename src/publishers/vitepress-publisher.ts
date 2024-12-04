@@ -3,12 +3,6 @@ import { PluginSettings } from '../settings/settings.interface';
 import { GitHubService } from '../services/github.service';
 import ObsidianPublisher from '../main';
 
-// 在文件顶部添加类型定义
-interface GitHubResponse {
-    sha: string;
-    content?: string;
-}
-
 // 在类定义之前声明接口
 export interface DirectoryNode {
     path: string;
@@ -140,14 +134,14 @@ export class VitePressPublisher extends BasePublisher {
                 : content;
 
             // 上传文件并获取 SHA
-            const result = await this.githubService.uploadFile(
+            const { sha } = await this.githubService.uploadFile(
                 fullPath,
                 processedContent,
                 `Update ${targetPath} via Obsidian Publisher`
-            ) as GitHubResponse;
+            );
 
             // 记录发布成功，包含 SHA
-            await this.recordPublishStatus(filePath, fullPath, true, result.sha);
+            await this.recordPublishStatus(filePath, fullPath, true, sha);
             
         } catch (error) {
             // 记录发布失败

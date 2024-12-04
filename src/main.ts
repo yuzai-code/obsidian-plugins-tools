@@ -276,7 +276,7 @@ export default class ObsidianPublisher extends Plugin {
 					menuItem.onClick(async (evt: MouseEvent) => {
 						if (item.type === 'file') {
 							// 如果选择的是文件，显示提示
-							new Notice('请选择目录进行发布，不能选择���件');
+							new Notice('请选择目录进行发布，不能选择文件');
 							return;
 						}
 
@@ -308,7 +308,7 @@ export default class ObsidianPublisher extends Plugin {
 									subMenu.showAtPosition({ x: rect.right, y: rect.top });
 								}
 							} else {
-								// 击目���名称时执行发布
+								// 击目录名称时执行发布
 								await this.publishToSelectedDirectory(activeFile, item.path);
 							}
 						} else if (item.type === 'dir') {
@@ -402,14 +402,13 @@ export default class ObsidianPublisher extends Plugin {
 		workspace.revealLeaf(leaf);
 	}
 
-	public async recordPublish(filePath: string, remotePath: string, platform: 'github', status: 'success' | 'failed', sha?: string) {
+	public async recordPublish(filePath: string, remotePath: string, platform: 'github' , status: 'success' | 'failed' = 'success') {
 		this.publishHistory.addRecord({
 			filePath,
 			remotePath,
 			platform,
 			lastPublished: Date.now(),
-			status,
-			sha
+			status
 		});
 		
 		if (this.dashboardView) {

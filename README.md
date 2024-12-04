@@ -1,89 +1,89 @@
 # Obsidian Publisher Plugin
 
-[English](README_EN.md) | 简体中文
+[简体中文](README_CN.md) | Englis
 
-一个用于将 Obsidian 笔记发布到个人博客的插件。目前支持发布到 VitePress 站点。
+A plugin for publishing Obsidian notes to your personal blog. Currently supports publishing to VitePress sites.
 
-## 功能特点
+## Features
 
-- 支持发布到 VitePress 站点
-- 支持一键发布和选择目录发布
-- 支持保持原有文件目录结构
-- 支持自动添加 frontmatter
-- 支持设置默认发布目录
-- 支持 GitHub Token 安全输入
+- Support publishing to VitePress sites
+- Support quick publish and directory selection
+- Support maintaining original file structure
+- Support automatic frontmatter addition
+- Support default publishing directory
+- Support secure GitHub Token input
 
-## 安装方法
+## Installation
 
-1. 下载最新版本的插件
-2. 解压到 Obsidian 插件目录 `.obsidian/plugins/`
-3. 在 Obsidian 设置中启用插件
+1. Download the latest version of the plugin
+2. Extract to Obsidian plugins directory `.obsidian/plugins/`
+3. Enable the plugin in Obsidian settings
 
-## 配置说明
+## Configuration
 
-### VitePress 设置
+### VitePress Settings
 
-- **启用 VitePress 发布**：开启/关闭 VitePress 发布功能
-- **添加 Frontmatter**：自动为发布的文档添加 frontmatter（包含日期等信息）
-- **保持文件结构**：发布时保持 Obsidian 中的原有文件目录结构
-- **默认发布目录**：设置一键发布时的默认目标目录
+- **Enable VitePress Publishing**: Toggle VitePress publishing functionality
+- **Add Frontmatter**: Automatically add frontmatter to published documents (including date)
+- **Keep File Structure**: Maintain original file directory structure when publishing
+- **Default Directory**: Set default target directory for quick publishing
 
-### GitHub 设置
+### GitHub Settings
 
-- **GitHub Token**：用于访问 GitHub API 的个人访问令牌
-- **GitHub 用户名**：你的 GitHub 用户名
-- **GitHub 仓库**：VitePress 站点所在的仓库名
-- **GitHub 分支**：要发布到的分支名称（默认为 main）
-- **VitePress 路径**：VitePress 文档在仓库中的路径
+- **GitHub Token**: Personal access token for GitHub API
+- **GitHub Username**: Your GitHub username
+- **GitHub Repository**: Repository name where VitePress site is located
+- **GitHub Branch**: Branch name to publish to (default is main)
+- **VitePress Path**: VitePress documentation path in repository
 
-## 使用方法
+## Usage
 
-### 一键发布
+### Quick Publish
 
-1. 点击工具栏的发布图标（纸飞机）
-2. 选择"一键发布"选项
-3. 文档将被发布到默认目录（如果已设置）或根目录
+1. Click the publish icon (paper plane) in toolbar
+2. Select "Quick Publish" option
+3. Document will be published to default directory (if set) or root directory
 
-### 选择目录发布
+### Directory Selection Publishing
 
-1. 点击工具栏的发布图标
-2. 选择"选择目录发布"选项
-3. 在弹出的目录列表中选择目标目录
-4. 文档将被发布到选定的目录
+1. Click the publish icon in toolbar
+2. Select "Choose Directory" option
+3. Select target directory from the popup list
+4. Document will be published to selected directory
 
-### 命令面板
+### Command Palette
 
-也可以通过命令面板使用以下命令：
+You can also use these commands via command palette:
 
-- `一键发布到 VitePress`：快速发布当前文档
-- `发布到 VitePress`：常规发布当前文档
+- `Quick Publish to VitePress`: Quickly publish current document
+- `Publish to VitePress`: Regular publish current document
 
-## 目录结构说明
+## Directory Structure
 
-当启用"保持文件结构"选项时：
+When "Keep File Structure" is enabled:
 
-- 插件会保持 Obsidian 中的原有目录结构
-- 例如：如果文件在 Obsidian 中的路径是 `docs/frontend/vue.md`
-  - 不设置默认目录时：发布后的路径将是 `vitepressPath/docs/frontend/vue.md`
-  - 设置默认目录为 `posts` 时：发布后的路径将是 `vitepressPath/posts/docs/frontend/vue.md`
+- Plugin maintains original directory structure from Obsidian
+- Example: if file path in Obsidian is `docs/frontend/vue.md`
+  - Without default directory: published path will be `vitepressPath/docs/frontend/vue.md`
+  - With default directory `posts`: published path will be `vitepressPath/posts/docs/frontend/vue.md`
 
-当禁用"保持文件结构"选项时：
+When "Keep File Structure" is disabled:
 
-- 插件只使用文件名
-- 例如：对于同一个文件 `docs/frontend/vue.md`
-  - 不设置默认目录时：发布后的路径将是 `vitepressPath/vue.md`
-  - 设置默认目录为 `posts` 时：发布后的路径将是 `vitepressPath/posts/vue.md`
+- Plugin only uses filename
+- Example: for the same file `docs/frontend/vue.md`
+  - Without default directory: published path will be `vitepressPath/vue.md`
+  - With default directory `posts`: published path will be `vitepressPath/posts/vue.md`
 
-## 注意事项
+## Notes
 
-1. 首次使用前需要配置 GitHub Token 和相关设置
-2. GitHub Token 需要有仓库的读写权限
-3. 建议在发布前检查文档格式是否符合 VitePress 要求
-4. 如果启用了"保持文件结构"，请注意目标路径的长度限制
+1. GitHub Token and related settings must be configured before first use
+2. GitHub Token needs repository read/write permissions
+3. Recommend checking document format compatibility with VitePress before publishing
+4. Be aware of path length limits when "Keep File Structure" is enabled
 
-## 问题反馈
+## Feedback
 
-如果遇到问题或有功能建议，欢迎在 GitHub Issues 中反馈。
+If you encounter any issues or have feature suggestions, please feel free to submit them in GitHub Issues.
 
 ## License
 
