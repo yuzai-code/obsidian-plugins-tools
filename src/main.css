@@ -1,5 +1,4 @@
 /* 首先放置所有的 @import */
-@import "./stalin.css";
 @import "../main.css";
 
 /* 然后是其他 CSS 规则 */

@@ -56,7 +56,7 @@ await esbuild.build({
 }).catch(() => process.exit(1));
 
 if (!prod) {
-    await esbuild.context({
+    await esbuild.build({
         banner: {
             js: banner,
         },
@@ -95,8 +95,6 @@ if (!prod) {
         logLevel: "info",
         sourcemap: 'inline',
         outfile: 'main.js',
-    }).then(ctx => {
-        ctx.watch();
     });
 }
 
