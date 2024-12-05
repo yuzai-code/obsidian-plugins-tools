@@ -239,7 +239,7 @@ export default class ObsidianPublisher extends Plugin {
 	}
 
 	/**
-	 * 显示目录选择对话框并发布
+	 * 显示目录选择对话框并��布
 	 */
 	private async publishWithDirectorySelection(evt: MouseEvent) {
 		const activeFile = this.app.workspace.getActiveFile();
@@ -352,7 +352,7 @@ export default class ObsidianPublisher extends Plugin {
 	 * 插件卸载时执行
 	 */
 	onunload() {
-		this.app.workspace.detachLeavesOfType(DASHBOARD_VIEW_TYPE);
+		// 移除 detach leaves 代码
 	}
 
 	/**

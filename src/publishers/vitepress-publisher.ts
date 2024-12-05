@@ -8,7 +8,7 @@ export interface DirectoryNode {
     path: string;
     name: string;
     type: 'file' | 'dir';  // 添加类型区分
-    children: DirectoryNode[];
+    children: DirectoryNode[];  // 明确指定类型为 DirectoryNode[]
     level: number;
     hasChildren?: boolean;  // 是否可能有子内容
     isLoading: boolean;    
@@ -86,13 +86,12 @@ export class VitePressPublisher extends BasePublisher {
     /**
      * 记录发布状态
      */
-    private async recordPublishStatus(filePath: string, remotePath: string, success: boolean, sha?: string) {
+    private async recordPublishStatus(filePath: string, remotePath: string, success: boolean) {
         await this.plugin.recordPublish(
             filePath,
             remotePath,
             this.settings.platform,
-            success ? 'success' : 'failed',
-            sha
+            success ? 'success' : 'failed'
         );
     }
 
@@ -133,15 +132,15 @@ export class VitePressPublisher extends BasePublisher {
                 ? this.addVitepressFrontmatter(content)
                 : content;
 
-            // 上传文件并获取 SHA
-            const { sha } = await this.githubService.uploadFile(
+            // 上传文件
+            await this.githubService.uploadFile(
                 fullPath,
                 processedContent,
                 `Update ${targetPath} via Obsidian Publisher`
             );
 
-            // 记录发布成功，包含 SHA
-            await this.recordPublishStatus(filePath, fullPath, true, sha);
+            // 记录发布成功
+            await this.recordPublishStatus(filePath, fullPath, true);
             
         } catch (error) {
             // 记录发布失败
@@ -154,7 +153,7 @@ export class VitePressPublisher extends BasePublisher {
     /**
      * 添加 VitePress frontmatter
      * @param content 原始内容
-     * @returns 添加了 frontmatter 的内容
+     * @returns 添加了 frontmatter 内容
      */
     private addVitepressFrontmatter(content: string): string {
         // 如果内容已有 frontmatter，则不添加
@@ -292,7 +291,7 @@ layout: doc
                 path: item.path.replace(`${basePath}/`, ''),
                 name: item.name,
                 type: item.type,
-                children: [],
+                children: [] as DirectoryNode[],
                 level: 0,
                 hasChildren: item.type === 'dir' && item.hasSubDirs,
                 isLoading: false,
@@ -322,7 +321,7 @@ layout: doc
                 path: item.path.replace(`${basePath}/`, ''),
                 name: item.name,
                 type: item.type,
-                children: [],
+                children: [] as DirectoryNode[],
                 level: level,
                 hasChildren: item.type === 'dir' && item.hasSubDirs,
                 isLoading: false,

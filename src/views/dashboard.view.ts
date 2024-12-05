@@ -43,9 +43,7 @@ export class DashboardView extends ItemView {
         if (!contentEl) return;
 
         contentEl.empty();
-        contentEl.style.padding = '0';
-        contentEl.style.height = '100%';
-        contentEl.style.overflow = 'hidden';
+        contentEl.addClass('dashboard-view-content');
         
         const component = createApp(DashboardComponent, {
             notes: this.historyService.getAllRecords(),
