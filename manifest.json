@@ -1,7 +1,7 @@
 {
 	"id": "publisher",
 	"name": "Publisher",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"minAppVersion": "0.15.0",
 	"description": "将笔记发布到 GitHub VitePress 站点",
 	"author": "Yuzai",
