@@ -77,24 +77,27 @@
                   </span>
                   <div class="platform-actions">
                     <button
-                      class="action-button"
+                      class="icon-button"
                       @click="handleRepublish(note.filePath, note.platform)"
+                      :title="note.status === 'success' ? '重新发布' : '发布'"
                     >
-                      {{ note.status === 'success' ? '重新发布' : '发布' }}
+                      <i class="publish-icon"></i>
                     </button>
                     <button
                       v-if="note.status === 'success'"
-                      class="action-button"
+                      class="icon-button"
                       @click="handleUpdateFromRemote(note.filePath, note.platform)"
+                      title="从远程更新"
                     >
-                      从远程更新
+                      <i class="update-icon"></i>
                     </button>
                     <button
                       v-if="note.status === 'success'"
-                      class="action-button"
+                      class="icon-button"
                       @click="handleDeleteFromRemote(note.filePath, note.platform)"
+                      title="从远程删除"
                     >
-                      从远程删除
+                      <i class="delete-icon"></i>
                     </button>
                   </div>
                 </div>
@@ -618,34 +621,103 @@ watch(() => paginatedNotes.value, () => {
   color: #2da44e;
 }
 
+/* 平台操作按钮样式 */
 .platform-actions {
   display: flex;
   gap: 8px;
+  align-items: center;
 }
 
-.action-button {
-  padding: 6px 12px;
-  border-radius: 6px;
-  background: var(--interactive-accent);
-  color: var(--text-on-accent);
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
   border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-muted);
   cursor: pointer;
-  font-size: 0.85em;
-  font-weight: 500;
   transition: all 0.2s ease;
 }
 
-.action-button:hover {
-  background: var(--interactive-accent-hover);
+.icon-button:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
   transform: translateY(-1px);
 }
 
-.publish-time,
-.remote-path,
-.status {
-  font-size: 0.9em;
-  color: var(--text-muted);
-  margin-top: 8px;
+/* 图标样式 */
+.publish-icon::before {
+  content: '';
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background-color: currentColor;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 4v2h14V4H5zm0 10h4v6h6v-6h4l-7-7-7 7z'/%3E%3C/svg%3E");
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 4v2h14V4H5zm0 10h4v6h6v-6h4l-7-7-7 7z'/%3E%3C/svg%3E");
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+}
+
+.update-icon::before {
+  content: '';
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background-color: currentColor;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z'/%3E%3C/svg%3E");
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z'/%3E%3C/svg%3E");
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+}
+
+.delete-icon::before {
+  content: '';
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background-color: currentColor;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z'/%3E%3C/svg%3E");
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z'/%3E%3C/svg%3E");
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+}
+
+/* 添加悬浮提示样式 */
+.icon-button {
+  position: relative;
+}
+
+.icon-button:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+  font-size: 12px;
+  white-space: nowrap;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 1000;
+  margin-bottom: 4px;
 }
 
 /* 分页控件 */
