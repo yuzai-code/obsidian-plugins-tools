@@ -48,6 +48,7 @@ export class SettingsTab extends PluginSettingTab {
                     this.plugin.settings.githubEnabled = value;
                     await this.plugin.saveSettings();
                     this.plugin.initializePublishers();
+                    this.display();
                 }));
 
         if (this.plugin.settings.githubEnabled) {
@@ -151,9 +152,9 @@ export class SettingsTab extends PluginSettingTab {
                 .onChange(async (value) => {
                     this.plugin.settings.vitepress.enabled = value;
                     await this.plugin.saveSettings();
-                    // 重新初始化发布器
                     this.plugin.initializePublishers();
                     new Notice('VitePress设置已更新');
+                    this.display();
                 }));
 
         // VitePress 路径

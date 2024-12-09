@@ -350,8 +350,3 @@
 .token-visibility-toggle:hover {
   background-color: var(--background-modifier-hover);
 }
-.dashboard-view-content {
-    padding: 0;
-    height: 100%;
-    overflow: hidden;
-}
