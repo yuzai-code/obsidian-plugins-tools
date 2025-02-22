@@ -22,6 +22,7 @@ export class SettingsTab extends PluginSettingTab {
         });
 
         const result = await service.validateConfig();
+        console.log('result',result);
         new Notice(result.message);
         return result.success;
     }

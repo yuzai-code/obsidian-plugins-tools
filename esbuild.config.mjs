@@ -101,7 +101,7 @@ if (!prod) {
 // CSS 构建
 if (!prod) {
     const cssContext = await esbuild.context({
-        entryPoints: ["./src/main.css"],
+        entryPoints: ["main.css"],
         outfile: "styles.css",
         bundle: true,
         allowOverwrite: true,
@@ -110,7 +110,7 @@ if (!prod) {
     await cssContext.watch();
 } else {
     await esbuild.build({
-        entryPoints: ["./src/main.css"],
+        entryPoints: ["main.css"],
         outfile: "styles.css",
         bundle: true,
         allowOverwrite: true,
