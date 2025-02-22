@@ -14,7 +14,7 @@
   flex-direction: column;
   position: relative;
 }
-.dashboard-header::after {
+.dashboard-header:after {
   content: "";
   position: absolute;
   bottom: 0;
@@ -24,12 +24,11 @@
   background: var(--background-modifier-border);
 }
 .dashboard-header h2 {
-  margin: 0;
+  margin: 0 0 16px;
   font-size: 1.6em;
   color: var(--text-normal);
   font-weight: 500;
-  letter-spacing: -0.5px;
-  margin-bottom: 16px;
+  letter-spacing: -.5px;
 }
 .search-box {
   position: relative;
@@ -42,8 +41,8 @@
   border-radius: 8px;
   background-color: var(--background-primary);
   color: var(--text-normal);
-  font-size: 0.95em;
-  transition: all 0.2s ease;
+  font-size: .95em;
+  transition: all .2s ease;
 }
 .search-input:focus {
   outline: none;
@@ -58,7 +57,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.95em;
+  font-size: .95em;
 }
 .batch-publish-button {
   background: var(--interactive-accent);
@@ -67,9 +66,9 @@
   border-radius: 6px;
   border: none;
   cursor: pointer;
-  font-size: 0.9em;
+  font-size: .9em;
   font-weight: 500;
-  transition: background-color 0.2s ease;
+  transition: background-color .2s ease;
 }
 .batch-publish-button:hover {
   background: var(--interactive-accent-hover);
@@ -90,9 +89,9 @@
   color: var(--text-muted);
   user-select: none;
   text-align: center;
-  font-size: 0.95em;
+  font-size: .95em;
   font-weight: 500;
-  transition: all 0.2s ease;
+  transition: all .2s ease;
 }
 .tab-item:hover {
   background: var(--background-modifier-hover);
@@ -112,7 +111,7 @@
   border: 1px solid var(--background-modifier-border);
   border-radius: 8px;
   overflow: hidden;
-  transition: all 0.2s ease;
+  transition: all .2s ease;
   margin-bottom: 8px;
 }
 .note-item:hover {
@@ -125,7 +124,7 @@
   background: var(--background-secondary);
   cursor: pointer;
   user-select: none;
-  transition: background-color 0.2s ease;
+  transition: background-color .2s ease;
 }
 .note-title-bar:hover {
   background: var(--background-modifier-hover);
@@ -138,18 +137,18 @@
   flex: 1;
   font-weight: 500;
   color: var(--text-normal);
-  font-size: 0.95em;
+  font-size: .95em;
 }
 .platform-badge {
   display: inline-flex;
   align-items: center;
   padding: 3px 8px;
   border-radius: 4px;
-  font-size: 0.85em;
+  font-size: .85em;
   font-weight: 500;
 }
 .platform-badge.github {
-  background: rgba(45, 164, 78, 0.1);
+  background: #2da44e1a;
   color: #2da44e;
 }
 .note-details {
@@ -160,10 +159,10 @@
 }
 .note-details:not(.hidden) {
   display: block;
-  animation: slideDown 0.2s ease-out;
+  animation: slideDown .2s ease-out;
 }
 @keyframes slideDown {
-  from {
+  0% {
     opacity: 0;
     transform: translateY(-10px);
   }
@@ -207,14 +206,14 @@
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all .2s ease;
 }
 .icon-button:hover {
   background: var(--background-modifier-hover);
   color: var(--text-normal);
   transform: translateY(-1px);
 }
-.publish-icon::before {
+.publish-icon:before {
   content: "";
   display: inline-block;
   width: 16px;
@@ -229,7 +228,7 @@
   -webkit-mask-repeat: no-repeat;
   -webkit-mask-position: center;
 }
-.update-icon::before {
+.update-icon:before {
   content: "";
   display: inline-block;
   width: 16px;
@@ -244,7 +243,7 @@
   -webkit-mask-repeat: no-repeat;
   -webkit-mask-position: center;
 }
-.delete-icon::before {
+.delete-icon:before {
   content: "";
   display: inline-block;
   width: 16px;
@@ -262,12 +261,12 @@
 .icon-button {
   position: relative;
 }
-.icon-button:hover::after {
+.icon-button:hover:after {
   content: attr(title);
   position: absolute;
   bottom: 100%;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%);
   padding: 4px 8px;
   background: var(--background-modifier-hover);
   color: var(--text-normal);
@@ -294,20 +293,20 @@
   background: var(--background-primary);
   color: var(--text-normal);
   cursor: pointer;
-  font-size: 0.9em;
-  transition: all 0.2s ease;
+  font-size: .9em;
+  transition: all .2s ease;
 }
 .page-button:not(:disabled):hover {
   background: var(--background-modifier-hover);
   border-color: var(--interactive-accent);
 }
 .page-button:disabled {
-  opacity: 0.5;
+  opacity: .5;
   cursor: not-allowed;
 }
 .page-info {
   color: var(--text-muted);
-  font-size: 0.9em;
+  font-size: .9em;
 }
 .empty-state {
   text-align: center;
@@ -327,16 +326,16 @@
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 0.9em;
+  font-size: .9em;
   font-weight: 500;
-  transition: all 0.2s ease;
+  transition: all .2s ease;
 }
 .switch-tab-button:hover {
   background: var(--interactive-accent-hover);
   transform: translateY(-1px);
 }
 @keyframes fadeIn {
-  from {
+  0% {
     opacity: 0;
     transform: translateY(10px);
   }
@@ -346,5 +345,5 @@
   }
 }
 .note-item {
-  animation: fadeIn 0.3s ease;
+  animation: fadeIn .3s ease;
 }

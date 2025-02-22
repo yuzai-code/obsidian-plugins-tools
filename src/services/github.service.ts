@@ -69,6 +69,7 @@ export class GitHubService {
         
         const response = await fetch(apiUrl, { headers: this.getHeaders() });
         if (!response.ok) {
+            console.log(`output->response`,response);
             throw new Error(`获取目录列表失败: ${response.statusText}`);
         }
 

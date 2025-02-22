@@ -20,9 +20,7 @@ export class SettingsTab extends PluginSettingTab {
             repo: this.settings.githubRepo,
             branch: this.settings.githubBranch
         });
-
         const result = await service.validateConfig();
-        console.log('result',result);
         new Notice(result.message);
         return result.success;
     }

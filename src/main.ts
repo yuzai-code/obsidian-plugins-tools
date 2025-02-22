@@ -1,4 +1,4 @@
-import { App, Plugin, Notice, Menu, TFile, PluginManifest } from 'obsidian';
+import { App, Plugin, Notice, Menu, TFile, PluginManifest, Modal, TextComponent } from 'obsidian';
 import { SettingsTab } from './settings/settings-tab';
 import { PluginSettings, DEFAULT_SETTINGS } from './settings/settings.interface';
 import { VitePressPublisher, DirectoryNode } from './publishers/vitepress-publisher';
@@ -28,6 +28,9 @@ export default class ObsidianPublisher extends Plugin {
 	 * 插件加载时执行
 	 */
 	async onload() {
+		const styleEl = document.createElement('style');
+		styleEl.textContent = styles;
+		document.head.appendChild(styleEl);
 		await this.loadSettings();
 		await this.publishHistory.load();
 
@@ -193,13 +196,11 @@ export default class ObsidianPublisher extends Plugin {
 	private showPublishMenu(evt: MouseEvent) {
 		const menu = new Menu();
 
-		// 检查 GitHub 是否启用
 		if (!this.settings.githubEnabled) {
 			new Notice('GitHub 发布功能未启用');
 			return;
 		}
 
-		// 一键发布选项
 		menu.addItem((item) => {
 			item
 				.setTitle('一键发布到 GitHub')
@@ -210,13 +211,10 @@ export default class ObsidianPublisher extends Plugin {
 						new Notice('没有打开的文件');
 						return;
 					}
-
 					try {
 						const content = await this.app.vault.read(activeFile);
 						const publisher = this.publishers.get('vitepress');
-						if (!publisher) {
-							throw new Error('VitePress 发布器未启用');
-						}
+						if (!publisher) throw new Error('VitePress 发布器未启用');
 						await publisher.quickPublish(content, activeFile.path);
 						new Notice('发布成功！');
 					} catch (error) {
@@ -225,21 +223,18 @@ export default class ObsidianPublisher extends Plugin {
 				});
 		});
 
-		// 选择目录发布选项
 		menu.addItem((item) => {
 			item
 				.setTitle('选择目录发布到 GitHub')
 				.setIcon('folder')
-				.onClick(async () => {
-					await this.publishWithDirectorySelection(evt);
-				});
+				.onClick(() => this.publishWithDirectorySelection(evt));
 		});
 
 		menu.showAtMouseEvent(evt);
 	}
 
 	/**
-	 * 显示目录选择对话框并��布
+	 * 显示目录选择对话框并发布
 	 */
 	private async publishWithDirectorySelection(evt: MouseEvent) {
 		const activeFile = this.app.workspace.getActiveFile();
@@ -259,70 +254,7 @@ export default class ObsidianPublisher extends Plugin {
 			const directories = await publisher.getDirectories();
 			loadingNotice.hide();
 			
-			const menu = new Menu();
-
-			// 递归创建目录菜单
-			const createDirectoryMenu = (parentMenu: Menu, item: DirectoryNode) => {
-				parentMenu.addItem((menuItem) => {
-					const indent = '  '.repeat(item.level);
-					menuItem.setTitle(indent + item.name);
-					
-					if (item.type === 'dir') {
-						menuItem.setIcon(item.hasChildren ? 'chevron-right' : 'folder');
-					} else {
-						menuItem.setIcon('document');
-					}
-					
-					menuItem.onClick(async (evt: MouseEvent) => {
-						if (item.type === 'file') {
-							// 如果选择的是文件，显示提示
-							new Notice('请选择目录进行发布，不能选择文件');
-							return;
-						}
-
-						if (item.type === 'dir' && item.hasChildren) {
-							const target = evt.target as HTMLElement;
-							const iconEl = target.closest('.menu-item')?.querySelector('.svg-icon');
-							if (!iconEl) return;
-							
-							const iconRect = iconEl.getBoundingClientRect();
-							const clickX = evt.clientX;
-							
-							// 如果点击在图标区域，展开子菜单
-							if (clickX >= iconRect.left - 10 && clickX <= iconRect.right + 10) {
-								evt.stopPropagation();
-								
-								if (!item.loaded) {
-									item.isLoading = true;
-									const subItems = await publisher.loadSubDirectories(item.path);
-									item.children = subItems;
-									item.loaded = true;
-									item.isLoading = false;
-								}
-								
-								const subMenu = new Menu();
-								item.children.forEach(child => createDirectoryMenu(subMenu, child));
-								
-								const rect = target.closest('.menu-item')?.getBoundingClientRect();
-								if (rect) {
-									subMenu.showAtPosition({ x: rect.right, y: rect.top });
-								}
-							} else {
-								// 击目录名称时执行发布
-								await this.publishToSelectedDirectory(activeFile, item.path);
-							}
-						} else if (item.type === 'dir') {
-							// 普通目录直接发布
-							await this.publishToSelectedDirectory(activeFile, item.path);
-						}
-					});
-				});
-			};
-
-			// 创建顶级目录和文件列表
-			directories.forEach(item => createDirectoryMenu(menu, item));
-
-			menu.showAtMouseEvent(evt);
+			new DirectorySelectionModal(this.app, directories, publisher, activeFile, this).open();
 		} catch (error) {
 			new Notice(`获取目录列表失败：${error instanceof Error ? error.message : '未知错误'}`);
 		}
@@ -331,18 +263,14 @@ export default class ObsidianPublisher extends Plugin {
 	/**
 	 * 发布到选定的目录
 	 */
-	private async publishToSelectedDirectory(file: TFile, dirPath: string) {
+	public async publishToSelectedDirectory(file: TFile, dirPath: string) {
 		try {
 			const content = await this.app.vault.read(file);
 			const publisher = this.publishers.get('vitepress');
-			
-			// 构建远程路径：如果有选择目录，则将文件直接放在该目录下
-			const remotePath = dirPath 
-				? `${dirPath}/${file.name}`  // 直接使用文件名，而不是完整路径
-				: file.name;
-				
+			const remotePath = dirPath ? `${dirPath}/${file.name}` : file.name;
 			await publisher?.publishToDirectory(content, remotePath, dirPath);
 			new Notice('发布成功！');
+			this.recordPublish(file.path, remotePath, 'github', 'success');
 		} catch (error) {
 			new Notice(`发布失败：${error instanceof Error ? error.message : '未知错误'}`);
 		}
@@ -495,3 +423,336 @@ class DirectoryModal extends SuggestModal<DirectoryNode> {
 		this.onSelect(dir);
 	}
 }
+
+// 自定义目录选择弹窗
+class DirectorySelectionModal extends Modal {
+	private directories: DirectoryNode[];
+	private publisher: VitePressPublisher;
+	private activeFile: TFile;
+	private plugin: ObsidianPublisher;
+	private filteredDirectories: DirectoryNode[];
+
+	constructor(
+		app: App,
+		directories: DirectoryNode[],
+		publisher: VitePressPublisher,
+		activeFile: TFile,
+		plugin: ObsidianPublisher
+	) {
+		super(app);
+		this.directories = directories;
+		this.publisher = publisher;
+		this.activeFile = activeFile;
+		this.plugin = plugin;
+		this.filteredDirectories = [...directories];
+	}
+
+	onOpen() {
+		const { contentEl } = this;
+		contentEl.addClass('directory-selection-modal');
+
+		// 设置弹窗标题
+		this.titleEl.setText('选择发布目录');
+
+		// 添加搜索框
+		const searchInput = new TextComponent(contentEl);
+		searchInput.setPlaceholder('搜索一级目录...');
+		searchInput.onChange((value) => this.filterDirectories(value));
+		searchInput.inputEl.style.width = '100%';
+		searchInput.inputEl.style.marginBottom = '10px';
+
+		// 创建目录列表容器
+		const listContainer = contentEl.createEl('div', { cls: 'directory-list' });
+		listContainer.style.maxHeight = '300px';
+		listContainer.style.overflowY = 'auto';
+
+		// 渲染初始列表
+		this.renderDirectoryList(listContainer);
+	}
+
+	// 过滤目录
+	filterDirectories(searchTerm: string) {
+		const term = searchTerm.toLowerCase();
+		if (!term) {
+			// 如果搜索词为空，恢复原始目录结构
+			this.filteredDirectories = [...this.directories];
+		} else {
+			// 搜索并保持目录结构
+			this.filteredDirectories = this.filterDirectoryTree(this.directories, term);
+		}
+		this.updateDirectoryList();
+	}
+
+	// 添加新的过滤树方法
+	private filterDirectoryTree(dirs: DirectoryNode[], term: string): DirectoryNode[] {
+		return dirs.reduce((filtered: DirectoryNode[], dir) => {
+			// 创建目录节点的副本
+			const dirCopy = { ...dir, children: [] as DirectoryNode[] };
+			
+			// 如果有子目录，递归过滤
+			if (dir.children && dir.children.length > 0) {
+				dirCopy.children = this.filterDirectoryTree(dir.children, term);
+			}
+
+			// 如果当前目录名称匹配或者有匹配的子目录，则包含此目录
+			if (dir.name.toLowerCase().includes(term) || dirCopy.children.length > 0) {
+				// 保持原有的展开状态
+				dirCopy.isExpanded = dir.isExpanded;
+				dirCopy.loaded = dir.loaded;
+				filtered.push(dirCopy);
+			}
+
+			return filtered;
+		}, []);
+	}
+
+	// 更新目录列表
+	updateDirectoryList() {
+		const listContainer = this.contentEl.querySelector('.directory-list');
+		if (listContainer) {
+			listContainer.empty();
+			this.renderDirectoryList(listContainer as HTMLElement);
+		}
+	}
+
+	// 渲染目录列表
+	renderDirectoryList(container: HTMLElement) {
+		container.empty();
+		
+		const createTreeItem = (item: DirectoryNode, parentEl: HTMLElement) => {
+			const itemContainer = parentEl.createEl('div', {
+				cls: 'directory-tree-item'
+			});
+
+			// 创建目录项主体
+			const itemContent = itemContainer.createEl('div', {
+				cls: 'directory-item-content'
+			});
+
+			// 创建左侧缩进和图标容器
+			const leftContainer = itemContent.createEl('div', {
+				cls: 'directory-left-container'
+			});
+
+			// 缩进占位
+			for (let i = 0; i < item.level; i++) {
+				leftContainer.createEl('span', {
+					cls: 'directory-indent-spacer'
+				});
+			}
+
+			// 展开/折叠图标容器
+			const toggleContainer = leftContainer.createEl('span', {
+				cls: 'directory-toggle-container'
+			});
+
+			// 展开/折叠图标
+			if (item.hasChildren) {
+				const toggleIcon = toggleContainer.createEl('span', {
+					cls: `directory-toggle ${item.loaded && item.isExpanded ? 'expanded' : ''}`
+				});
+				
+				// 添加加载中状态
+				if (item.isLoading) {
+					toggleIcon.innerHTML = '⌛'; // 或者使用其他加载图标
+					toggleIcon.addClass('loading');
+				} else {
+					toggleIcon.innerHTML = '▶';
+				}
+			}
+
+			// 目录图标
+			const iconEl = leftContainer.createEl('span', {
+				cls: `directory-icon ${item.hasChildren ? 'folder' : 'document'}`
+			});
+			iconEl.innerHTML = item.hasChildren ? '📁' : '📄';
+
+			// 目录名称和按钮容器
+			const contentContainer = itemContent.createEl('div', {
+				cls: 'directory-content-container'
+			});
+
+			// 目录名称
+			contentContainer.createEl('span', {
+				text: item.name,
+				cls: 'directory-name'
+			});
+
+			// 发布按钮
+			if (item.type === 'dir') {
+				const publishButton = contentContainer.createEl('button', {
+					cls: 'directory-publish-button',
+					text: '发布到此处'
+				});
+				
+				publishButton.onclick = async (evt) => {
+					evt.stopPropagation();
+					try {
+						const content = await this.app.vault.read(this.activeFile);
+						const remotePath = item.path ? `${item.path}/${this.activeFile.name}` : this.activeFile.name;
+						await this.publisher.publishToDirectory(content, remotePath, item.path);
+						new Notice('发布成功！');
+						this.close();
+					} catch (error) {
+						new Notice(`发布失败：${error instanceof Error ? error.message : '未知错误'}`);
+					}
+				};
+			}
+
+			// 为整个目录项添加点击事件（仅对目录有效）
+			if (item.hasChildren) {
+				itemContent.onclick = async () => {
+					if (!item.loaded) {
+						item.isLoading = true;
+						this.updateDirectoryList();
+						
+						const subItems = await this.publisher.loadSubDirectories(item.path);
+						item.children = subItems;
+						item.loaded = true;
+						item.isLoading = false;
+					}
+					
+					item.isExpanded = !item.isExpanded;
+					this.updateDirectoryList();
+				};
+
+				// 添加可点击的视觉提示
+				itemContent.addClass('clickable');
+			}
+
+			// 如果有子目录且已展开，则渲染子目录
+			if (item.hasChildren && item.loaded && item.isExpanded) {
+				const childrenContainer = itemContainer.createEl('div', {
+					cls: 'directory-children'
+				});
+				item.children.forEach(child => createTreeItem(child, childrenContainer));
+			}
+
+			return itemContainer;
+		};
+
+		// 创建根目录列表
+		const treeContainer = container.createEl('div', {
+			cls: 'directory-tree'
+		});
+		
+		this.filteredDirectories.forEach(item => {
+			createTreeItem(item, treeContainer);
+		});
+	}
+
+	onClose() {
+		this.contentEl.empty();
+	}
+}
+
+const styles = `
+	.directory-tree {
+		border: 1px solid var(--background-modifier-border);
+		border-radius: 3px;
+		background: var(--background-secondary);
+		padding: 8px;
+	}
+
+	.directory-tree-item {
+		margin: 2px 0;
+	}
+
+	.directory-item-content {
+		display: flex;
+		align-items: center;
+		padding: 4px 8px;
+		border-radius: 3px;
+		gap: 4px;
+	}
+
+	.directory-item-content.clickable {
+		cursor: pointer;
+	}
+
+	.directory-item-content.clickable:hover {
+		background-color: var(--background-modifier-hover);
+	}
+
+	.directory-left-container {
+		display: flex;
+		align-items: center;
+		flex-shrink: 0;
+	}
+
+	.directory-indent-spacer {
+		width: 16px;
+		flex-shrink: 0;
+	}
+
+	.directory-toggle-container {
+		width: 16px;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+	}
+
+	.directory-content-container {
+		display: flex;
+		align-items: center;
+		flex: 1;
+		min-width: 0;
+	}
+
+	.directory-icon {
+		width: 16px;
+		text-align: center;
+		margin-right: 4px;
+		flex-shrink: 0;
+	}
+
+	.directory-name {
+		flex: 1;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		padding: 2px 0;
+	}
+
+	.directory-publish-button {
+		padding: 2px 8px;
+		border-radius: 3px;
+		background-color: var(--interactive-accent);
+		color: var(--text-on-accent);
+		font-size: 12px;
+		cursor: pointer;
+		opacity: 0;
+		transition: opacity 0.15s ease;
+	}
+
+	.directory-item-content:hover .directory-publish-button {
+		opacity: 1;
+	}
+
+	.directory-children {
+		margin-left: 0;
+	}
+
+	.directory-toggle {
+		transition: transform 0.15s ease;
+	}
+
+	.directory-toggle.expanded {
+		transform: rotate(90deg);
+	}
+
+	.directory-toggle.loading {
+		animation: spin 1s linear infinite;
+	}
+
+	@keyframes spin {
+		from {
+			transform: rotate(0deg);
+		}
+		to {
+			transform: rotate(360deg);
+		}
+	}
+`;
+

@@ -10,9 +10,10 @@ export interface DirectoryNode {
     type: 'file' | 'dir';  // 添加类型区分
     children: DirectoryNode[];  // 明确指定类型为 DirectoryNode[]
     level: number;
-    hasChildren?: boolean;  // 是否可能有子内容
-    isLoading: boolean;    
-    loaded: boolean;      
+    hasChildren: boolean;
+    loaded: boolean;
+    isLoading: boolean;
+    isExpanded: boolean; // 新增
 }
 
 /**
@@ -262,17 +263,44 @@ layout: doc
                         type: 'dir',
                         children: [],
                         level: level,
+                        hasChildren: false,
                         loaded: false,
-                        isLoading: false
+                        isLoading: false,
+                        isExpanded: false
                     };
                     currentLevel.push(newNode);
                     currentLevel = newNode.children;
                 }
                 level++;
             }
+            
+            // 更新父节点的 hasChildren 属性
+            for (let i = parts.length - 2; i >= 0; i--) {
+                const parentPath = parts.slice(0, i + 1).join('/');
+                const parent = this.findNodeByPath(root, parentPath);
+                if (parent) {
+                    parent.hasChildren = true;
+                }
+            }
         }
         
         return root;
+    }
+
+    // 添加一个辅助方法来查找节点
+    private findNodeByPath(nodes: DirectoryNode[], path: string): DirectoryNode | null {
+        for (const node of nodes) {
+            if (node.path === path) {
+                return node;
+            }
+            if (node.children.length > 0) {
+                const found = this.findNodeByPath(node.children, path);
+                if (found) {
+                    return found;
+                }
+            }
+        }
+        return null;
     }
 
     /**
@@ -287,7 +315,7 @@ layout: doc
             const contents = await service.getContentsWithSubDirCheck(basePath);
             
             // 转换为 DirectoryNode 格式
-            return contents.map(item => ({
+            const nodes = contents.map(item => ({
                 path: item.path.replace(`${basePath}/`, ''),
                 name: item.name,
                 type: item.type,
@@ -295,8 +323,17 @@ layout: doc
                 level: 0,
                 hasChildren: item.type === 'dir' && item.hasSubDirs,
                 isLoading: false,
-                loaded: false
+                loaded: false,
+                isExpanded: false
             }));
+
+            // 排序：目录在前，文件在后，每组按字母排序
+            return nodes.sort((a, b) => {
+                if (a.type === b.type) {
+                    return a.name.localeCompare(b.name, 'zh-CN');
+                }
+                return a.type === 'dir' ? -1 : 1;
+            });
         } catch (error) {
             console.error('获取目录列表失败:', error);
             throw error;
@@ -317,7 +354,7 @@ layout: doc
             const level = dirPath.split('/').length;
             
             // 转换所有内容（包括文件和目录）
-            return contents.map(item => ({
+            const nodes = contents.map(item => ({
                 path: item.path.replace(`${basePath}/`, ''),
                 name: item.name,
                 type: item.type,
@@ -325,8 +362,17 @@ layout: doc
                 level: level,
                 hasChildren: item.type === 'dir' && item.hasSubDirs,
                 isLoading: false,
-                loaded: false
+                loaded: false,
+                isExpanded: false
             }));
+
+            // 排序：目录在前，文件在后，每组按字母排序
+            return nodes.sort((a, b) => {
+                if (a.type === b.type) {
+                    return a.name.localeCompare(b.name, 'zh-CN');
+                }
+                return a.type === 'dir' ? -1 : 1;
+            });
         } catch (error) {
             console.error(`加载子目录失败 ${dirPath}:`, error);
             throw error;
